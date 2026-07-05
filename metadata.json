@@ -1,0 +1,6 @@
+{
+  "name": "AI Voice Model & LoRA Dataset Studio",
+  "description": "An advanced voice design studio and high-quality TTS audio clip generator powered by Gemini to craft and export dataset WAV files for training custom LoRA voice models.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
