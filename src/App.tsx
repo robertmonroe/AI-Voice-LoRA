@@ -18,7 +18,10 @@ import {
   HelpCircle, 
   AlertCircle,
   Copy,
-  Check
+  Check,
+  Key,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import JSZip from "jszip";
 import { VoiceModel, AudioClip, TrainingPrompt } from "./types";
@@ -93,7 +96,11 @@ export default function App() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        return parsed.length > 0 ? parsed : PRESET_MODELS;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const valid = parsed.filter(m => m && typeof m === "object" && m.id);
+          return valid.length > 0 ? valid : PRESET_MODELS;
+        }
+        return PRESET_MODELS;
       } catch {
         return PRESET_MODELS;
       }
@@ -103,7 +110,18 @@ export default function App() {
 
   const [audioClips, setAudioClips] = useState<AudioClip[]>(() => {
     const saved = localStorage.getItem("lora_audio_clips");
-    return saved ? JSON.parse(saved) : [];
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter(c => c && typeof c === "object" && c.id && c.modelId && c.audioBase64);
+        }
+        return [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
   });
 
   const [selectedModelId, setSelectedModelId] = useState<string>(() => {
@@ -139,6 +157,22 @@ export default function App() {
   const [exportFormat, setExportFormat] = useState<"alexandria" | "cosyvoice" | "standard">("alexandria");
   const [copiedScriptId, setCopiedScriptId] = useState<string | null>(null);
 
+  // --- API Configuration & Keys State ---
+  const [apiProvider, setApiProvider] = useState<"google" | "openrouter">(() => {
+    return (localStorage.getItem("lora_api_provider") as "google" | "openrouter") || "google";
+  });
+  const [googleApiKey, setGoogleApiKey] = useState(() => {
+    return localStorage.getItem("lora_google_api_key") || "";
+  });
+  const [openRouterApiKey, setOpenRouterApiKey] = useState(() => {
+    return localStorage.getItem("lora_openrouter_api_key") || "";
+  });
+  const [openRouterModel, setOpenRouterModel] = useState(() => {
+    return localStorage.getItem("lora_openrouter_model") || "google/gemini-2.5-flash";
+  });
+  const [showGoogleKey, setShowGoogleKey] = useState(false);
+  const [showOpenRouterKey, setShowOpenRouterKey] = useState(false);
+
   // Sync state with LocalStorage
   useEffect(() => {
     localStorage.setItem("lora_voice_models", JSON.stringify(voiceModels));
@@ -152,6 +186,22 @@ export default function App() {
     localStorage.setItem("lora_selected_model_id", selectedModelId);
   }, [selectedModelId]);
 
+  useEffect(() => {
+    localStorage.setItem("lora_api_provider", apiProvider);
+  }, [apiProvider]);
+
+  useEffect(() => {
+    localStorage.setItem("lora_google_api_key", googleApiKey);
+  }, [googleApiKey]);
+
+  useEffect(() => {
+    localStorage.setItem("lora_openrouter_api_key", openRouterApiKey);
+  }, [openRouterApiKey]);
+
+  useEffect(() => {
+    localStorage.setItem("lora_openrouter_model", openRouterModel);
+  }, [openRouterModel]);
+
   // Cleanup audio playback on unmount
   useEffect(() => {
     return () => {
@@ -163,16 +213,16 @@ export default function App() {
     };
   }, []);
 
-  const activeModel = voiceModels.find(m => m.id === selectedModelId) || voiceModels[0];
-  const activeModelClips = audioClips.filter(c => c.modelId === selectedModelId);
+  const activeModel = voiceModels.find(m => m.id === selectedModelId) || voiceModels[0] || PRESET_MODELS[0];
+  const activeModelClips = audioClips.filter(c => c.modelId === activeModel.id);
 
   // Populate prompt in synthesizer
   const handleLoadPrompt = (prompt: TrainingPrompt) => {
     setStudioText(prompt.text);
     setStudioEmotion(prompt.emotion);
-    setCustomStyleCues(activeModel.prosodyInstructions);
-    setStudioSpeed(activeModel.recommendedSpeed);
-    setStudioPitch(activeModel.recommendedPitch);
+    setCustomStyleCues(activeModel.prosodyInstructions || "");
+    setStudioSpeed(activeModel.recommendedSpeed || 1.0);
+    setStudioPitch(activeModel.recommendedPitch || "Medium");
     setActivePromptId(prompt.id);
     setActiveTab("studio");
   };
@@ -258,7 +308,13 @@ export default function App() {
       const response = await fetch("/api/voice-models/design", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: designPrompt }),
+        body: JSON.stringify({ 
+          prompt: designPrompt,
+          apiProvider,
+          googleApiKey,
+          openRouterApiKey,
+          openRouterModel
+        }),
       });
 
       if (!response.ok) {
@@ -317,7 +373,7 @@ export default function App() {
     const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
     const char = characters[Math.floor(Math.random() * characters.length)];
     const num = Math.floor(1000 + Math.random() * 9000);
-    const newSeed = `${prefix}-${num}-${char}-${activeModel.baseVoice.toUpperCase()}`;
+    const newSeed = `${prefix}-${num}-${char}-${(activeModel.baseVoice || "Kore").toUpperCase()}`;
     handleUpdateVoiceSeed(newSeed);
   };
 
@@ -340,6 +396,7 @@ export default function App() {
           emotion: studioEmotion,
           prosodyInstructions: customStyleCues,
           voiceSeed: activeModel.voiceSeed, // Crucial: Locks vocal timber across scripts
+          googleApiKey,
         }),
       });
 
@@ -698,6 +755,127 @@ Generated automatically with ❤️ by Gemini.
             </div>
           </div>
 
+          {/* API CREDENTIALS PANEL */}
+          <div className="bg-slate-900 rounded-xl border border-slate-800 p-4 flex flex-col gap-3.5">
+            <div className="flex items-center gap-2 border-b border-slate-800/60 pb-2">
+              <Key className="h-4 w-4 text-indigo-400" />
+              <h2 className="text-xs uppercase font-mono tracking-wider font-semibold text-slate-300">API Credentials</h2>
+            </div>
+
+            {/* Provider Selector */}
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Active AI Designer:</label>
+              <div className="grid grid-cols-2 gap-1 bg-slate-950 p-0.5 rounded-lg border border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setApiProvider("google")}
+                  className={`text-[11px] py-1 rounded-md font-medium transition-all ${
+                    apiProvider === "google"
+                      ? "bg-indigo-600 text-white shadow-sm"
+                      : "text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  Google AI
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setApiProvider("openrouter")}
+                  className={`text-[11px] py-1 rounded-md font-medium transition-all ${
+                    apiProvider === "openrouter"
+                      ? "bg-indigo-600 text-white shadow-sm"
+                      : "text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  OpenRouter
+                </button>
+              </div>
+            </div>
+
+            {/* Google AI Key Input */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex justify-between items-center">
+                <label className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Google AI API Key:</label>
+                <button
+                  type="button"
+                  onClick={() => setShowGoogleKey(!showGoogleKey)}
+                  className="text-[10px] text-indigo-400 hover:text-indigo-300 flex items-center gap-0.5 font-medium"
+                >
+                  {showGoogleKey ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                  {showGoogleKey ? "Hide" : "Show"}
+                </button>
+              </div>
+              <input
+                type={showGoogleKey ? "text" : "password"}
+                value={googleApiKey}
+                onChange={(e) => setGoogleApiKey(e.target.value)}
+                placeholder="Using server key (optional)..."
+                className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-600"
+              />
+            </div>
+
+            {/* OpenRouter Key & Model Input */}
+            <div className="flex flex-col gap-2.5 border-t border-slate-800/60 pt-2.5">
+              <div className="flex flex-col gap-1.5">
+                <div className="flex justify-between items-center">
+                  <label className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">OpenRouter API Key:</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowOpenRouterKey(!showOpenRouterKey)}
+                    className="text-[10px] text-indigo-400 hover:text-indigo-300 flex items-center gap-0.5 font-medium"
+                  >
+                    {showOpenRouterKey ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                    {showOpenRouterKey ? "Hide" : "Show"}
+                  </button>
+                </div>
+                <input
+                  type={showOpenRouterKey ? "text" : "password"}
+                  value={openRouterApiKey}
+                  onChange={(e) => setOpenRouterApiKey(e.target.value)}
+                  placeholder="sk-or-..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-600"
+                />
+              </div>
+
+              {/* OpenRouter Model Selection */}
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">OpenRouter Model:</label>
+                <select
+                  value={
+                    ["google/gemini-2.5-flash", "google/gemini-2.5-pro", "meta-llama/llama-3.1-8b-instruct", "meta-llama/llama-3.3-70b-instruct", "deepseek/deepseek-chat"].includes(openRouterModel)
+                      ? openRouterModel
+                      : "custom"
+                  }
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val !== "custom") {
+                      setOpenRouterModel(val);
+                    } else {
+                      setOpenRouterModel("");
+                    }
+                  }}
+                  className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium"
+                >
+                  <option value="google/gemini-2.5-flash">Gemini 2.5 Flash</option>
+                  <option value="google/gemini-2.5-pro">Gemini 2.5 Pro</option>
+                  <option value="meta-llama/llama-3.1-8b-instruct">Llama 3.1 8B Instruct</option>
+                  <option value="meta-llama/llama-3.3-70b-instruct">Llama 3.3 70B Instruct</option>
+                  <option value="deepseek/deepseek-chat">DeepSeek Chat (V3)</option>
+                  <option value="custom">-- Custom Model --</option>
+                </select>
+
+                {!["google/gemini-2.5-flash", "google/gemini-2.5-pro", "meta-llama/llama-3.1-8b-instruct", "meta-llama/llama-3.3-70b-instruct", "deepseek/deepseek-chat"].includes(openRouterModel) && (
+                  <input
+                    type="text"
+                    value={openRouterModel}
+                    onChange={(e) => setOpenRouterModel(e.target.value)}
+                    placeholder="Enter model (e.g. qwen/qwen-2.5-72b-instruct)"
+                    className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 mt-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* TRAINING METRICS PANEL */}
           <div className="bg-slate-900 rounded-xl border border-slate-800 p-4 flex flex-col gap-4">
             <h2 className="text-xs uppercase font-mono tracking-wider font-semibold text-slate-400">Dataset Metrics</h2>
@@ -845,17 +1023,17 @@ Generated automatically with ❤️ by Gemini.
                 <div className="bg-slate-950/40 p-4 rounded-lg border border-slate-800/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex flex-col">
                     <span className="text-xs font-mono text-indigo-400 uppercase tracking-wider">Voice Profile</span>
-                    <h3 className="text-lg font-bold text-white mt-1">{activeModel.name}</h3>
-                    <p className="text-xs text-slate-400 mt-1 leading-relaxed">{activeModel.description}</p>
+                    <h3 className="text-lg font-bold text-white mt-1">{activeModel.name || "Custom Voice Model"}</h3>
+                    <p className="text-xs text-slate-400 mt-1 leading-relaxed">{activeModel.description || "Designed with Gemini."}</p>
                     <div className="flex flex-wrap gap-2 mt-2.5">
                       <span className="text-[10px] font-mono px-2 py-0.5 bg-slate-800 text-slate-300 rounded border border-slate-700">
-                        Gender: {activeModel.gender}
+                        Gender: {activeModel.gender || "Neutral"}
                       </span>
                       <span className="text-[10px] font-mono px-2 py-0.5 bg-slate-800 text-slate-300 rounded border border-slate-700">
-                        Accent: {activeModel.accent}
+                        Accent: {activeModel.accent || "Standard"}
                       </span>
                       <span className="text-[10px] font-mono px-2 py-0.5 bg-slate-800 text-slate-300 rounded border border-slate-700">
-                        Base Config: {activeModel.baseVoice}
+                        Base Config: {activeModel.baseVoice || "Kore"}
                       </span>
                     </div>
                   </div>
@@ -875,7 +1053,7 @@ Generated automatically with ❤️ by Gemini.
                       Locked AI Voice Seed Anchor (Consistent Acoustics)
                     </span>
                     <p className="text-xs text-slate-300">
-                      This unique seed anchors the throat thickness, physical vocal tract length, and resonance styling of <strong className="text-white">{activeModel.name}</strong>. It ensures the voice stays identical across all generated scripts, preventing different voices or acoustics.
+                      This unique seed anchors the throat thickness, physical vocal tract length, and resonance styling of <strong className="text-white">{activeModel.name || "Custom Voice Model"}</strong>. It ensures the voice stays identical across all generated scripts, preventing different voices or acoustics.
                     </p>
                   </div>
                   <div className="flex items-center gap-2.5 bg-slate-950 p-2 rounded-lg border border-slate-800 shrink-0">
@@ -907,7 +1085,7 @@ Generated automatically with ❤️ by Gemini.
                     </div>
 
                     <div className="flex flex-col gap-2.5 max-h-[360px] overflow-y-auto pr-1">
-                      {activeModel.trainingPrompts.map((prompt) => {
+                      {(activeModel.trainingPrompts || []).map((prompt) => {
                         const hasClip = audioClips.some(c => c.promptId === prompt.id);
                         const isSelectedPrompt = prompt.id === activePromptId;
                         return (
@@ -1237,9 +1415,11 @@ Generated automatically with ❤️ by Gemini.
                   <div className="p-3 bg-amber-500/10 text-amber-400 rounded-full border border-amber-500/20 mb-1">
                     <Sparkles className="h-8 w-8 animate-pulse" />
                   </div>
-                  <h3 className="text-xl font-bold text-white font-display">Gemini Voice Designer</h3>
+                  <h3 className="text-xl font-bold text-white font-display">
+                    {apiProvider === "openrouter" ? "OpenRouter Voice Designer" : "Gemini Voice Designer"}
+                  </h3>
                   <p className="text-xs text-slate-400 max-w-md">
-                    Input a description of a voice or character. Gemini will custom build a structured vocal profile, recommend configurations, and design a set of 12 distinct phonetically diverse script prompts.
+                    Input a description of a voice or character. {apiProvider === "openrouter" ? `OpenRouter (using ${openRouterModel || "selected model"})` : "Gemini"} will custom build a structured vocal profile, recommend configurations, and design a set of 12 distinct phonetically diverse script prompts.
                   </p>
                 </div>
 
