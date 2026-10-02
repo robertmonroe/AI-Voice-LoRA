@@ -1,387 +1,610 @@
 import React, { useState, useEffect, useRef } from "react";
-import { 
-  Sparkles, 
-  Volume2, 
-  Download, 
-  FolderDown, 
-  Play, 
-  Pause, 
-  Trash2, 
-  Plus, 
-  PlusCircle, 
-  BookOpen, 
-  Mic, 
-  CheckCircle2, 
-  Music, 
-  Settings2, 
-  FileAudio, 
-  HelpCircle, 
+import {
+  Sparkles,
+  Volume2,
+  Download,
+  FolderDown,
+  Play,
+  Pause,
+  Trash2,
+  Plus,
+  BookOpen,
+  Mic,
+  CheckCircle2,
+  Settings2,
+  FileAudio,
   AlertCircle,
   Copy,
   Check,
   Key,
   Eye,
-  EyeOff
+  EyeOff,
+  Users,
+  Sliders,
+  RefreshCw,
+  Layers,
+  Wand2,
+  Music2,
+  ListOrdered,
+  Database,
+  Brain,
+  Cpu,
+  Headphones,
+  ShieldCheck,
+  Film,
+  X,
+  PanelLeftClose,
+  PanelLeftOpen
 } from "lucide-react";
 import JSZip from "jszip";
-import { VoiceModel, AudioClip, TrainingPrompt } from "./types";
+import { VoiceModel, AudioClip, TrainingPrompt, DialogueLine, AudiobookProject, AudiobookChapter } from "./types";
+import { AudiobookStudio } from "./components/AudiobookStudio";
+import { LoRADatasetStudio } from "./components/LoRADatasetStudio";
+import { M4BCreatorPanel } from "./components/M4BCreatorPanel";
+import { ACXMasteringPanel } from "./components/ACXMasteringPanel";
+import { DialogueStudio } from "./components/DialogueStudio";
 
-const PRESET_MODELS: VoiceModel[] = [
+// Official 6 Prebuilt Acoustic Engines in Gemini 3.8 Flash TTS
+export const ROSTER_VOICES = [
   {
-    id: "preset_1",
-    name: "Classic Epic Narrator",
-    description: "A deep, resonant, cinematic male voice perfect for fantasy epics and sweeping saga narration. Filled with gravity and dramatic pause control.",
+    id: "Puck",
     gender: "Male",
-    accent: "British (RP)",
-    baseVoice: "Fenrir",
-    recommendedPitch: "Low",
-    recommendedSpeed: 0.88,
-    prosodyInstructions: "Speak in a deep, gravelly voice slowly, with a dramatic pause between clauses.",
-    narrationStyle: "Cinematic Audiobook Narration",
-    voiceSeed: "SEED-3814-MALE-GRAVEL-FENRIR",
-    createdAt: "2026-07-05T12:00:00Z",
-    trainingPrompts: [
-      { id: "tp_1_1", text: "Before the age of the glass cities, there was only the wind, and the endless sand.", emotion: "Serious", focus: "Cinematic pausing and deep sibilance" },
-      { id: "tp_1_2", text: "He raised the ancient obsidian blade, and for a brief moment, the storm fell completely silent.", emotion: "Dramatic", focus: "Plosive consonants and breath control" },
-      { id: "tp_1_3", text: "Do you hear that? The mountains themselves are whispering the secrets of the first stars.", emotion: "Whispering", focus: "Low-frequency breathiness" },
-      { id: "tp_1_4", text: "The countdown had begun: ten, nine, eight, and then, a total eclipse of the crimson sun.", emotion: "Serious", focus: "Number pronunciation and clinical spacing" }
-    ]
+    tone: "Agile, youthful, lively",
+    description: "Lightweight, energetic tenor with high flexibility for fast-paced, spirited delivery.",
+    color: "from-amber-500/20 to-orange-500/10 border-amber-500/30 text-amber-300"
   },
   {
-    id: "preset_2",
-    name: "Soothing Sleep Guide",
-    description: "A soft, intimate, gentle female voice designed for bedtime stories, meditation guidance, and ASMR content. Highly relaxing cadence.",
+    id: "Charon",
+    gender: "Male",
+    tone: "Deep, grave, resonant",
+    description: "Low, authoritative baritone with cinematic weight, steady gravitas, and commanding presence.",
+    color: "from-blue-500/20 to-indigo-500/10 border-blue-500/30 text-blue-300"
+  },
+  {
+    id: "Kore",
     gender: "Female",
-    accent: "American (Pacific Northwest)",
-    baseVoice: "Kore",
-    recommendedPitch: "Medium-High",
-    recommendedSpeed: 0.80,
-    prosodyInstructions: "Speak softly, near-whispering, slow down significantly, breathing gently.",
-    narrationStyle: "Guided Meditation & Sleep Aids",
-    voiceSeed: "SEED-9204-FEMALE-SOOTHING-KORE",
-    createdAt: "2026-07-05T12:00:00Z",
-    trainingPrompts: [
-      { id: "tp_2_1", text: "Breathe in deeply, feeling the cool night air fill your chest, and let it go slowly.", emotion: "Whispering", focus: "Soft sibilants and deep vocal relaxation" },
-      { id: "tp_2_2", text: "The stars are shining softly tonight, casting a warm, silver glow over the sleepy valley.", emotion: "Warm", focus: "Melodious pitch variations and long vowel glides" },
-      { id: "tp_2_3", text: "Let go of all your thoughts from today. Right now, there is absolutely nothing you need to do.", emotion: "Soothing", focus: "Calm prosody and rhythmic breathing pauses" },
-      { id: "tp_2_4", text: "Float gently down the river of sleep, drift away, and find peace in the quiet night.", emotion: "Whispering", focus: "Fricative consonants in quiet tones" }
-    ]
+    tone: "Warm, soothing, clear",
+    description: "Balanced, natural feminine resonance with rich vocal warmth and pristine audiobook articulation.",
+    color: "from-emerald-500/20 to-teal-500/10 border-emerald-500/30 text-emerald-300"
   },
   {
-    id: "preset_3",
-    name: "Enthusiastic Tech Reviewer",
-    description: "A bright, crisp, high-energy voice with fast articulation and engaging conversational rhythm, ideal for reviews, blogs, and marketing.",
+    id: "Fenrir",
     gender: "Male",
-    accent: "American (West Coast)",
-    baseVoice: "Zephyr",
-    recommendedPitch: "Medium-High",
-    recommendedSpeed: 1.12,
-    prosodyInstructions: "Speak cheerfully, quickly, with a bright tone and emphasis on words like 'unbelievable' or 'amazing'.",
-    narrationStyle: "High-Energy Promo & Video Essays",
-    voiceSeed: "SEED-1102-MALE-ACTIVE-ZEPHYR",
-    createdAt: "2026-07-05T12:00:00Z",
-    trainingPrompts: [
-      { id: "tp_3_1", text: "Unbelievable! This brand new screen is packing over eight million self-lit pixels!", emotion: "Happy", focus: "Excited exclamation marks and rapid pacing" },
-      { id: "tp_3_2", text: "But here is the real kicker: the battery life easily matches forty-eight hours of solid use.", emotion: "Energetic", focus: "Crisp plosive stops and mid-sentence emphasis" },
-      { id: "tp_3_3", text: "We ran five different benchmarks, and honestly, the performance gain is absolutely insane.", emotion: "Happy", focus: "Casual modern conversational delivery" },
-      { id: "tp_3_4", text: "Should you buy it? Let's dive deep into the specs and find out right now!", emotion: "Energetic", focus: "Question pacing and punchy endings" }
-    ]
+    tone: "Gravelly, rough, bold",
+    description: "Deep, weathered, textured male timber with authentic grit, commanding presence, and dramatic impact.",
+    color: "from-purple-500/20 to-indigo-500/10 border-purple-500/30 text-purple-300"
+  },
+  {
+    id: "Aoede",
+    gender: "Female",
+    tone: "Melodic, expressive, lyrical",
+    description: "Dynamic, bright, articulate female voice with wide emotional range and natural musicality.",
+    color: "from-rose-500/20 to-pink-500/10 border-rose-500/30 text-rose-300"
+  },
+  {
+    id: "Zephyr",
+    gender: "Male",
+    tone: "Crisp, dynamic, conversational",
+    description: "Modern, articulate, high-clarity male voice perfect for natural conversations and fast explanations.",
+    color: "from-cyan-500/20 to-sky-500/10 border-cyan-500/30 text-cyan-300"
   }
+];
+
+// Curated dialect suggestions
+export const ACCENT_PRESETS = [
+  "British (Received Pronunciation)",
+  "British (Cockney London)",
+  "Scottish (Highlands)",
+  "Irish (Dublin)",
+  "Australian (Broad Outback)",
+  "American (Southern Drawl)",
+  "American (New York / Brooklyn)",
+  "American (Pacific Northwest)",
+  "Mid-Atlantic (Golden-Era Cinema)",
+  "Spanish-accented English",
+  "French-accented English",
+  "Japanese-accented English"
+];
+
+// Expressive tags supported by Gemini 3.8 Flash TTS
+export const VOCAL_BURSTS = [
+  { tag: "<laugh>", label: "Laugh", desc: "Natural laughter burst" },
+  { tag: "<gasp>", label: "Gasp", desc: "Audible intake of shock or surprise" },
+  { tag: "<breath>", label: "Breath", desc: "Controlled audible pause or sigh" },
+  { tag: "<chuckle>", label: "Chuckle", desc: "Brief subdued laugh" },
+  { tag: "<sigh>", label: "Sigh", desc: "Exhale of relief or weariness" },
+  { tag: "|mhm|", label: "|mhm|", desc: "Agreement backchanneling" },
+  { tag: "|yeah|", label: "|yeah|", desc: "Casual conversational affirmation" },
+  { tag: "|right|", label: "|right|", desc: "Attentive backchanneling" }
 ];
 
 export default function App() {
   // --- Persistent State ---
-  const [voiceModels, setVoiceModels] = useState<VoiceModel[]>(() => {
-    const saved = localStorage.getItem("lora_voice_models");
+  const [voiceModels, setVoiceModels] = useState<VoiceModel[]>([]);
+  const [audioClips, setAudioClips] = useState<AudioClip[]>([]);
+  const [selectedModelId, setSelectedModelId] = useState<string>("");
+  const [isLoadedFromServer, setIsLoadedFromServer] = useState(false);
+
+  // Active voice model
+  const activeModel = voiceModels.find(m => m.id === selectedModelId) || voiceModels[0] || null;
+  const activeModelClips = activeModel ? audioClips.filter(c => c.modelId === activeModel.id) : [];
+
+  // --- UI Navigation ---
+  const [activeTab, setActiveTab] = useState<"audiobook" | "m4b" | "acx" | "lora" | "screenplay" | "designer" | "studio" | "library">("audiobook");
+  const [showVoiceSidebar, setShowVoiceSidebar] = useState(false);
+
+  // --- Shared Audiobook Project (for Audiobook, M4B Creator, and ACX tabs) ---
+  const [audiobookProject, setAudiobookProject] = useState<AudiobookProject>(() => {
+    const saved = localStorage.getItem("gemini_audiobook_project");
     if (saved) {
       try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const valid = parsed.filter(m => m && typeof m === "object" && m.id);
-          return valid.length > 0 ? valid : PRESET_MODELS;
-        }
-        return PRESET_MODELS;
-      } catch {
-        return PRESET_MODELS;
-      }
+        return JSON.parse(saved);
+      } catch {}
     }
-    return PRESET_MODELS;
-  });
-
-  const [audioClips, setAudioClips] = useState<AudioClip[]>(() => {
-    const saved = localStorage.getItem("lora_audio_clips");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return parsed.filter(c => c && typeof c === "object" && c.id && c.modelId && c.audioBase64);
+    return {
+      id: "project_default",
+      title: "Alice's Adventures in Wonderland",
+      author: "Lewis Carroll",
+      narrationMode: "multi",
+      defaultSoloVoice: "Kore",
+      defaultSoloAccent: "British (Received Pronunciation)",
+      defaultSoloStyle: "Articulate, expressive storytelling with warm pacing and whimsy.",
+      characters: [
+        {
+          id: "char_narrator",
+          name: "Narrator",
+          gender: "Female",
+          baseVoice: "Kore",
+          accent: "British (Received Pronunciation)",
+          styleGuidance: "Rich, whimsical storytelling with crisp classic British cadence."
+        },
+        {
+          id: "char_alice",
+          name: "Alice",
+          gender: "Female",
+          baseVoice: "Aoede",
+          accent: "British (Received Pronunciation)",
+          styleGuidance: "Curious, thoughtful, young Victorian girl speaking with wonder."
+        },
+        {
+          id: "char_rabbit",
+          name: "White Rabbit",
+          gender: "Male",
+          baseVoice: "Puck",
+          accent: "British (Cockney London)",
+          styleGuidance: "Fretful, frantic, nervous mutterings, hurried pacing <gasp>."
         }
-        return [];
-      } catch {
-        return [];
-      }
-    }
-    return [];
+      ],
+      chapters: [],
+      pauseBetweenChunksMs: 400
+    };
   });
 
-  const [selectedModelId, setSelectedModelId] = useState<string>(() => {
-    const saved = localStorage.getItem("lora_selected_model_id");
-    if (saved) return saved;
-    return PRESET_MODELS[0].id;
-  });
+  const handleUpdateAudiobookProject = (updated: AudiobookProject) => {
+    setAudiobookProject(updated);
+    try {
+      localStorage.setItem("gemini_audiobook_project", JSON.stringify(updated));
+    } catch {}
+  };
 
-  // --- UI Navigation & Interaction State ---
-  const [activeTab, setActiveTab] = useState<"designer" | "studio" | "library">("studio");
-  const [designPrompt, setDesignPrompt] = useState("");
-  const [isDesigning, setIsDesigning] = useState(false);
-  const [designError, setDesignError] = useState<string | null>(null);
+  // Active chapter for ACX mastering
+  const activeChapter = audiobookProject.chapters.find(c => c.id === audiobookProject.activeChapterId) || audiobookProject.chapters[0] || null;
 
-  // --- Studio Synthesis State ---
+  // --- API Credentials ---
+  const [googleApiKey, setGoogleApiKey] = useState(() => localStorage.getItem("gemini_tts_api_key") || "");
+  const [showApiKey, setShowApiKey] = useState(false);
+
+  // --- Voice Designer Workspace State ---
+  const [designerMode, setDesignerMode] = useState<"direct" | "ai">("direct");
+  const [draftName, setDraftName] = useState("Custom Character Voice");
+  const [draftDescription, setDraftDescription] = useState("Authentic, expressive persona designed for Gemini 3.8 Flash TTS.");
+  const [draftGender, setDraftGender] = useState("Male");
+  const [draftAccent, setDraftAccent] = useState("British (Cockney London)");
+  const [isCustomAccent, setIsCustomAccent] = useState(false);
+  const [draftBaseVoice, setDraftBaseVoice] = useState<string>("Puck");
+  const [draftStyleGuidance, setDraftStyleGuidance] = useState("Authentic East London Cockney accent, lively street merchant rhythm, expressive and spirited.");
+  const [draftPitch, setDraftPitch] = useState("Medium");
+  const [draftSpeed, setDraftSpeed] = useState(1.0);
+  const [draftNarrationStyle, setDraftNarrationStyle] = useState("Character Dialogue & Audiobook");
+  const [draftPrompts, setDraftPrompts] = useState<TrainingPrompt[]>([
+    { id: "p_1", text: "Right, listen 'ere mate, <laugh> you can't just stroll into the docklands thinkin' nobody's watchin'!", emotion: "Lively", focus: "Glottal stops, diphthongs, and burst laughter" },
+    { id: "p_2", text: "Proper mystery, that is. Thirty-two crates vanished clean into thin air, and not a soul saw a thing!", emotion: "Surprised", focus: "Rapid articulation and question cadence" },
+    { id: "p_3", text: "Watch your step by the wet stones. <breath> One slip and you'll be swimming in the Thames before midnight.", emotion: "Serious", focus: "Measured pause, breath control, and dental stops" }
+  ]);
+
+  // AI Prompt Designer State
+  const [aiDesignPrompt, setAiDesignPrompt] = useState("");
+  const [isAiDesigning, setIsAiDesigning] = useState(false);
+  const [aiDesignError, setAiDesignError] = useState<string | null>(null);
+
+  // Live Acoustic Preview State
+  const [previewText, setPreviewText] = useState("Right then! This is a live preview test using the new Gemini 3.8 Flash TTS engine. How does my accent and delivery sound to you?");
+  const [previewAudioBase64, setPreviewAudioBase64] = useState<string | null>(null);
+  const [isPreviewGenerating, setIsPreviewGenerating] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [isPlayingPreview, setIsPlayingPreview] = useState(false);
+  const [previewProgress, setPreviewProgress] = useState(0);
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+  const previewIntervalRef = useRef<any>(null);
+
+  // Script Generation State
+  const [isGeneratingPrompts, setIsGeneratingPrompts] = useState(false);
+
+  // --- Clip Studio Synthesizer State ---
   const [studioText, setStudioText] = useState("");
-  const [studioEmotion, setStudioEmotion] = useState("Neutral");
-  const [studioPitch, setStudioPitch] = useState("Medium");
-  const [studioSpeed, setStudioSpeed] = useState(1.0);
-  const [customStyleCues, setCustomStyleCues] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [studioStyleOverride, setStudioStyleOverride] = useState("");
+  const [isGeneratingClip, setIsGeneratingClip] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [activePromptId, setActivePromptId] = useState<string | null>(null);
 
-  // --- Active Audio Player State ---
+  // --- Active Audio Clip Player State ---
   const [playingClipId, setPlayingClipId] = useState<string | null>(null);
-  const [playbackProgress, setPlaybackProgress] = useState(0); // 0 to 100
+  const [playbackProgress, setPlaybackProgress] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playbackIntervalRef = useRef<any>(null);
 
-  // --- Dataset Customizer State ---
+  // --- Dataset Exporter Format ---
   const [exportSeparator, setExportSeparator] = useState<"|" | ",">("|");
-  const [exportFormat, setExportFormat] = useState<"alexandria" | "cosyvoice" | "standard">("alexandria");
-  const [copiedScriptId, setCopiedScriptId] = useState<string | null>(null);
 
-  // --- API Configuration & Keys State ---
-  const [apiProvider, setApiProvider] = useState<"google" | "openrouter">(() => {
-    return (localStorage.getItem("lora_api_provider") as "google" | "openrouter") || "google";
-  });
-  const [googleApiKey, setGoogleApiKey] = useState(() => {
-    return localStorage.getItem("lora_google_api_key") || "";
-  });
-  const [openRouterApiKey, setOpenRouterApiKey] = useState(() => {
-    return localStorage.getItem("lora_openrouter_api_key") || "";
-  });
-  const [openRouterModel, setOpenRouterModel] = useState(() => {
-    return localStorage.getItem("lora_openrouter_model") || "google/gemini-2.5-flash";
-  });
-  const [showGoogleKey, setShowGoogleKey] = useState(false);
-  const [showOpenRouterKey, setShowOpenRouterKey] = useState(false);
-
-  // Sync state with LocalStorage
+  // Load from backend server on mount
   useEffect(() => {
-    localStorage.setItem("lora_voice_models", JSON.stringify(voiceModels));
-  }, [voiceModels]);
-
-  useEffect(() => {
-    localStorage.setItem("lora_audio_clips", JSON.stringify(audioClips));
-  }, [audioClips]);
-
-  useEffect(() => {
-    localStorage.setItem("lora_selected_model_id", selectedModelId);
-  }, [selectedModelId]);
-
-  useEffect(() => {
-    localStorage.setItem("lora_api_provider", apiProvider);
-  }, [apiProvider]);
-
-  useEffect(() => {
-    localStorage.setItem("lora_google_api_key", googleApiKey);
-  }, [googleApiKey]);
-
-  useEffect(() => {
-    localStorage.setItem("lora_openrouter_api_key", openRouterApiKey);
-  }, [openRouterApiKey]);
-
-  useEffect(() => {
-    localStorage.setItem("lora_openrouter_model", openRouterModel);
-  }, [openRouterModel]);
-
-  // Cleanup audio playback on unmount
-  useEffect(() => {
-    return () => {
-      if (playbackIntervalRef.current) clearInterval(playbackIntervalRef.current);
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
+    let active = true;
+    const loadServerData = async () => {
+      try {
+        const response = await fetch("/api/data");
+        if (response.ok && active) {
+          const data = await response.json();
+          if (data.voiceModels && Array.isArray(data.voiceModels) && data.voiceModels.length > 0) {
+            setVoiceModels(data.voiceModels);
+            setSelectedModelId(data.voiceModels[0].id);
+          }
+          if (data.audioClips && Array.isArray(data.audioClips)) {
+            setAudioClips(data.audioClips);
+          }
+        }
+      } catch (err) {
+        console.warn("Could not load dataset from server database:", err);
+      } finally {
+        if (active) {
+          setIsLoadedFromServer(true);
+        }
       }
+    };
+    loadServerData();
+    return () => {
+      active = false;
     };
   }, []);
 
-  const activeModel = voiceModels.find(m => m.id === selectedModelId) || voiceModels[0] || PRESET_MODELS[0];
-  const activeModelClips = audioClips.filter(c => c.modelId === activeModel.id);
+  // Sync to backend database whenever models or clips change
+  useEffect(() => {
+    if (!isLoadedFromServer) return;
+    const sync = async () => {
+      try {
+        await fetch("/api/data/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ voiceModels, audioClips }),
+        });
+      } catch (err) {
+        console.error("Failed to sync data with server:", err);
+      }
+    };
+    sync();
+  }, [voiceModels, audioClips, isLoadedFromServer]);
 
-  // Populate prompt in synthesizer
-  const handleLoadPrompt = (prompt: TrainingPrompt) => {
-    setStudioText(prompt.text);
-    setStudioEmotion(prompt.emotion);
-    setCustomStyleCues(activeModel.prosodyInstructions || "");
-    setStudioSpeed(activeModel.recommendedSpeed || 1.0);
-    setStudioPitch(activeModel.recommendedPitch || "Medium");
-    setActivePromptId(prompt.id);
-    setActiveTab("studio");
+  // When active voice model changes, sync studio inputs
+  useEffect(() => {
+    if (activeModel) {
+      setStudioStyleOverride(activeModel.styleGuidance || "");
+      if (activeModel.trainingPrompts && activeModel.trainingPrompts.length > 0) {
+        setStudioText(activeModel.trainingPrompts[0].text);
+        setActivePromptId(activeModel.trainingPrompts[0].id);
+      } else {
+        setStudioText("");
+        setActivePromptId(null);
+      }
+    }
+  }, [selectedModelId]);
+
+  // Handle API key change
+  const handleApiKeyChange = (val: string) => {
+    setGoogleApiKey(val);
+    localStorage.setItem("gemini_tts_api_key", val);
   };
 
-  // --- Waveform Generation Algorithm (Repeatable & Fingerprinted) ---
-  const generateWaveform = (base64: string, count: number = 40): number[] => {
-    try {
-      const raw = atob(base64.slice(0, 800));
-      const data: number[] = [];
-      const step = Math.max(1, Math.floor(raw.length / count));
-      for (let i = 0; i < count; i++) {
-        const charCode = raw.charCodeAt(Math.min(raw.length - 1, i * step));
-        const val = 0.12 + ((charCode % 32) / 32) * 0.85;
-        data.push(val);
+  // --- Voice Model Management: Create Blank Voice Model ---
+  const handleCreateBlankVoice = () => {
+    setDraftName("New Custom Voice");
+    setDraftDescription("Created from scratch with direct vocal controls.");
+    setDraftGender("Neutral");
+    setDraftAccent("British (Received Pronunciation)");
+    setIsCustomAccent(false);
+    setDraftBaseVoice("Kore");
+    setDraftStyleGuidance("Clear, articulate, and natural conversational cadence.");
+    setDraftPitch("Medium");
+    setDraftSpeed(1.0);
+    setDraftNarrationStyle("Audiobook & Dialogue");
+    setDraftPrompts([
+      { id: `tp_${Date.now()}_1`, text: "The morning light filtered through the courtyard, waking the quiet stone city.", emotion: "Neutral", focus: "Vowel flow and sibilants" },
+      { id: `tp_${Date.now()}_2`, text: "Could you please explain how this apparatus functions in low-gravity conditions?", emotion: "Inquisitive", focus: "Question rise and plosives" }
+    ]);
+    setPreviewText("This is a live preview of my new custom voice profile. Clean audio, zero prompt wrapping.");
+    setPreviewAudioBase64(null);
+    setDesignerMode("direct");
+    setActiveTab("designer");
+  };
+
+  // --- Load Existing Model into Designer for Editing ---
+  const handleEditModelInDesigner = (model: VoiceModel) => {
+    setDraftName(model.name);
+    setDraftDescription(model.description);
+    setDraftGender(model.gender);
+    setDraftAccent(model.accent);
+    setIsCustomAccent(!ACCENT_PRESETS.includes(model.accent));
+    setDraftBaseVoice(model.baseVoice);
+    setDraftStyleGuidance(model.styleGuidance);
+    setDraftPitch(model.pitch);
+    setDraftSpeed(model.speed);
+    setDraftNarrationStyle(model.narrationStyle);
+    setDraftPrompts(model.trainingPrompts || []);
+    setPreviewText(model.trainingPrompts?.[0]?.text || "Testing my voice model.");
+    setPreviewAudioBase64(null);
+    setDesignerMode("direct");
+    setActiveTab("designer");
+  };
+
+  // --- Duplicate Voice Model ---
+  const handleDuplicateModel = (model: VoiceModel) => {
+    const duplicated: VoiceModel = {
+      ...model,
+      id: `model_${Date.now()}`,
+      name: `${model.name} (Copy)`,
+      createdAt: new Date().toISOString()
+    };
+    setVoiceModels(prev => [duplicated, ...prev]);
+    setSelectedModelId(duplicated.id);
+  };
+
+  // --- Delete Voice Model (Allows deleting ANY model, no forced presets!) ---
+  const handleDeleteModel = (modelId: string) => {
+    if (voiceModels.length <= 1) {
+      alert("At least one voice profile should remain in your studio. You can edit it or create a new one!");
+      return;
+    }
+    const confirmed = confirm("Are you sure you want to delete this voice model profile?");
+    if (!confirmed) return;
+
+    setVoiceModels(prev => prev.filter(m => m.id !== modelId));
+    setAudioClips(prev => prev.filter(c => c.modelId !== modelId));
+    if (selectedModelId === modelId) {
+      const remaining = voiceModels.filter(m => m.id !== modelId);
+      if (remaining.length > 0) {
+        setSelectedModelId(remaining[0].id);
       }
-      return data;
-    } catch {
-      return Array.from({ length: count }, (_, i) => 0.2 + Math.abs(Math.sin(i * 0.45)) * 0.65);
     }
   };
 
-  // --- Playback Controller ---
-  const handleTogglePlay = (clip: AudioClip) => {
-    if (playingClipId === clip.id) {
-      // Pause
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
-      setPlayingClipId(null);
-      if (playbackIntervalRef.current) clearInterval(playbackIntervalRef.current);
-    } else {
-      // Stop currently playing
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
-      if (playbackIntervalRef.current) clearInterval(playbackIntervalRef.current);
-
-      // Setup and play new
-      setPlayingClipId(clip.id);
-      setPlaybackProgress(0);
-
-      // Create blob url from persistent base64 audio
-      const binary = atob(clip.audioBase64);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) {
-        bytes[i] = binary.charCodeAt(i);
-      }
-      const blob = new Blob([bytes], { type: "audio/wav" });
-      const url = URL.createObjectURL(blob);
-
-      const audio = new Audio(url);
-      audioRef.current = audio;
-
-      audio.oncanplaythrough = () => {
-        audio.play();
-      };
-
-      audio.onended = () => {
-        setPlayingClipId(null);
-        setPlaybackProgress(100);
-        if (playbackIntervalRef.current) clearInterval(playbackIntervalRef.current);
-        URL.revokeObjectURL(url);
-      };
-
-      playbackIntervalRef.current = setInterval(() => {
-        if (audio) {
-          const progress = (audio.currentTime / (audio.duration || clip.duration || 1)) * 100;
-          setPlaybackProgress(Math.min(progress, 100));
-        }
-      }, 80);
-    }
-  };
-
-  // --- Call AI Voice Design Studio (Gemini-3.5-flash) ---
-  const handleDesignVoice = async (e: React.FormEvent) => {
+  // --- AI Voice Persona Designer (gemini-3.8-flash) ---
+  const handleAiDesignVoice = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!designPrompt.trim()) return;
+    if (!aiDesignPrompt.trim()) return;
 
-    setIsDesigning(true);
-    setDesignError(null);
+    setIsAiDesigning(true);
+    setAiDesignError(null);
 
     try {
       const response = await fetch("/api/voice-models/design", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          prompt: designPrompt,
-          apiProvider,
-          googleApiKey,
-          openRouterApiKey,
-          openRouterModel
-        }),
+        body: JSON.stringify({
+          prompt: aiDesignPrompt,
+          googleApiKey
+        })
       });
 
       if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error || "Failed to design voice profile.");
+        let errorText = "Failed to design voice profile.";
+        try {
+          const err = await response.json();
+          errorText = err.error || err.message || errorText;
+        } catch {
+          errorText = await response.text();
+        }
+        try {
+          const parsed = JSON.parse(errorText);
+          if (parsed.error?.message) {
+            errorText = parsed.error.message;
+          }
+        } catch {}
+        throw new Error(errorText);
       }
 
-      const voiceData = await response.json();
-      
-      const newVoice: VoiceModel = {
-        id: `voice_${Date.now()}`,
-        name: voiceData.name || "Custom Voice Model",
-        description: voiceData.description || "Designed with Gemini.",
-        gender: voiceData.gender || "Neutral",
-        accent: voiceData.accent || "Standard",
-        baseVoice: voiceData.baseVoice || "Kore",
-        recommendedPitch: voiceData.recommendedPitch || "Medium",
-        recommendedSpeed: voiceData.recommendedSpeed || 1.0,
-        prosodyInstructions: voiceData.prosodyInstructions || "",
-        narrationStyle: voiceData.narrationStyle || "General Narration",
-        voiceSeed: voiceData.voiceSeed || `SEED-${Math.floor(1000 + Math.random() * 9000)}-MALE-GRAVEL-KORE`,
-        trainingPrompts: voiceData.trainingPrompts || [],
-        createdAt: new Date().toISOString(),
-      };
+      const data = await response.json();
 
-      setVoiceModels(prev => [newVoice, ...prev]);
-      setSelectedModelId(newVoice.id);
-      setDesignPrompt("");
-      setActiveTab("studio");
-      setStudioText(newVoice.trainingPrompts[0]?.text || "");
-      setStudioEmotion(newVoice.trainingPrompts[0]?.emotion || "Neutral");
-      setStudioPitch(newVoice.recommendedPitch);
-      setStudioSpeed(newVoice.recommendedSpeed);
-      setCustomStyleCues(newVoice.prosodyInstructions);
+      setDraftName(data.name || "Custom Persona");
+      setDraftDescription(data.description || "Designed with Gemini 3.8 Flash.");
+      setDraftGender(data.gender || "Neutral");
+      setDraftAccent(data.accent || "British (Received Pronunciation)");
+      setIsCustomAccent(!ACCENT_PRESETS.includes(data.accent || ""));
+      setDraftBaseVoice(data.baseVoice || "Kore");
+      setDraftPitch(data.pitch || "Medium");
+      setDraftSpeed(data.speed || 1.0);
+      setDraftStyleGuidance(data.styleGuidance || "");
+      setDraftNarrationStyle(data.narrationStyle || "General");
+      setDraftPrompts(data.trainingPrompts || []);
+
+      if (data.trainingPrompts?.[0]?.text) {
+        setPreviewText(data.trainingPrompts[0].text);
+      }
+
+      setPreviewAudioBase64(null);
+      setDesignerMode("direct");
     } catch (err: any) {
       console.error(err);
-      setDesignError(err.message || "Something went wrong while designing the voice profile.");
+      let msg = err.message || "Failed to design voice persona.";
+      try {
+        const parsed = JSON.parse(msg);
+        if (parsed.error?.message) msg = parsed.error.message;
+      } catch {}
+      setAiDesignError(msg);
     } finally {
-      setIsDesigning(false);
+      setIsAiDesigning(false);
     }
   };
 
-  // --- Acoustic Voice Seed Customizers ---
-  const handleUpdateVoiceSeed = (newSeed: string) => {
-    setVoiceModels(prev => prev.map(m => {
-      if (m.id === selectedModelId) {
-        return { ...m, voiceSeed: newSeed };
+  // --- Synthesize Live Acoustic Preview with Gemini 3.8 Flash TTS ---
+  const handleGeneratePreview = async () => {
+    if (!previewText.trim()) return;
+
+    setIsPreviewGenerating(true);
+    setPreviewError(null);
+    setPreviewAudioBase64(null);
+    setIsPlayingPreview(false);
+    setPreviewProgress(0);
+    if (previewIntervalRef.current) clearInterval(previewIntervalRef.current);
+
+    try {
+      const response = await fetch("/api/audio/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: previewText,
+          baseVoice: draftBaseVoice,
+          styleGuidance: draftStyleGuidance,
+          speed: draftSpeed,
+          pitch: draftPitch,
+          googleApiKey
+        })
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || "Preview generation failed.");
       }
-      return m;
-    }));
+
+      const data = await response.json();
+      if (!data.audio) {
+        throw new Error("No audio payload returned from Gemini 3.8 Flash TTS.");
+      }
+
+      setPreviewAudioBase64(data.audio);
+
+      // Trigger immediate preview playback
+      playBase64Wav(data.audio, (audio) => {
+        previewAudioRef.current = audio;
+        setIsPlayingPreview(true);
+        audio.onended = () => {
+          setIsPlayingPreview(false);
+          setPreviewProgress(100);
+          if (previewIntervalRef.current) clearInterval(previewIntervalRef.current);
+        };
+        previewIntervalRef.current = setInterval(() => {
+          if (audio && audio.duration) {
+            setPreviewProgress(Math.min((audio.currentTime / audio.duration) * 100, 100));
+          }
+        }, 80);
+      });
+    } catch (err: any) {
+      console.error(err);
+      setPreviewError(err.message || "Preview generation failed. Please check your Gemini API key.");
+    } finally {
+      setIsPreviewGenerating(false);
+    }
   };
 
-  const handleGenerateRandomSeed = () => {
-    const prefixes = ["SEED", "SIGNATURE", "VOX", "TIMBER", "ANALOG", "ACOUSTIC"];
-    const characters = ["BARITONE", "TENOR", "SOPRANO", "ALTO", "GRAVEL", "SILK", "CRISP", "WARM", "AIRY"];
-    const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
-    const char = characters[Math.floor(Math.random() * characters.length)];
-    const num = Math.floor(1000 + Math.random() * 9000);
-    const newSeed = `${prefix}-${num}-${char}-${(activeModel.baseVoice || "Kore").toUpperCase()}`;
-    handleUpdateVoiceSeed(newSeed);
+  const handleTogglePlayPreview = () => {
+    if (!previewAudioBase64) return;
+    if (isPlayingPreview && previewAudioRef.current) {
+      previewAudioRef.current.pause();
+      setIsPlayingPreview(false);
+      if (previewIntervalRef.current) clearInterval(previewIntervalRef.current);
+    } else if (previewAudioRef.current) {
+      previewAudioRef.current.play();
+      setIsPlayingPreview(true);
+      previewIntervalRef.current = setInterval(() => {
+        if (previewAudioRef.current && previewAudioRef.current.duration) {
+          setPreviewProgress(Math.min((previewAudioRef.current.currentTime / previewAudioRef.current.duration) * 100, 100));
+        }
+      }, 80);
+    } else {
+      playBase64Wav(previewAudioBase64, (audio) => {
+        previewAudioRef.current = audio;
+        setIsPlayingPreview(true);
+        audio.onended = () => {
+          setIsPlayingPreview(false);
+          setPreviewProgress(100);
+        };
+      });
+    }
   };
 
-  // --- Call Gemini TTS Generation (gemini-3.1-flash-tts-preview) ---
-  const handleGenerateAudio = async () => {
-    if (!studioText.trim()) return;
+  // --- Generate 10 Custom Phonetic Scripts via Gemini 3.8 ---
+  const handleGenerateCustomPrompts = async () => {
+    setIsGeneratingPrompts(true);
+    try {
+      const response = await fetch("/api/voice-models/generate-prompts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: draftName,
+          gender: draftGender,
+          accent: draftAccent,
+          baseVoice: draftBaseVoice,
+          narrationStyle: draftNarrationStyle,
+          styleGuidance: draftStyleGuidance,
+          googleApiKey
+        })
+      });
 
-    setIsGenerating(true);
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || "Failed to generate scripts.");
+      }
+
+      const prompts = await response.json();
+      if (Array.isArray(prompts) && prompts.length > 0) {
+        setDraftPrompts(prompts);
+      }
+    } catch (err: any) {
+      alert("Error generating prompts: " + err.message);
+    } finally {
+      setIsGeneratingPrompts(false);
+    }
+  };
+
+  // --- Save / Commit Voice Model to Studio Library ---
+  const handleSaveDraftVoiceModel = () => {
+    if (!draftName.trim()) {
+      alert("Voice name cannot be empty.");
+      return;
+    }
+
+    const newModel: VoiceModel = {
+      id: `model_${Date.now()}`,
+      name: draftName.trim(),
+      description: draftDescription.trim(),
+      gender: draftGender,
+      accent: draftAccent,
+      baseVoice: draftBaseVoice,
+      styleGuidance: draftStyleGuidance.trim(),
+      pitch: draftPitch,
+      speed: draftSpeed,
+      narrationStyle: draftNarrationStyle,
+      trainingPrompts: draftPrompts,
+      createdAt: new Date().toISOString()
+    };
+
+    setVoiceModels(prev => [newModel, ...prev]);
+    setSelectedModelId(newModel.id);
+    setActiveTab("studio");
+  };
+
+  // --- Synthesize High-Quality Clip in Clip Studio ---
+  const handleGenerateStudioClip = async () => {
+    if (!studioText.trim() || !activeModel) return;
+
+    setIsGeneratingClip(true);
     setGenerationError(null);
 
     try {
@@ -391,1112 +614,1157 @@ export default function App() {
         body: JSON.stringify({
           text: studioText,
           baseVoice: activeModel.baseVoice,
-          pitch: studioPitch,
-          speed: studioSpeed,
-          emotion: studioEmotion,
-          prosodyInstructions: customStyleCues,
-          voiceSeed: activeModel.voiceSeed, // Crucial: Locks vocal timber across scripts
-          googleApiKey,
-        }),
+          styleGuidance: studioStyleOverride || activeModel.styleGuidance,
+          speed: activeModel.speed,
+          pitch: activeModel.pitch,
+          googleApiKey
+        })
       });
 
       if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error || "Failed to generate audio clip.");
+        const err = await response.json();
+        throw new Error(err.error || "Synthesis failed.");
       }
 
       const data = await response.json();
       if (!data.audio) {
-        throw new Error("No audio payload received.");
+        throw new Error("No audio payload returned from Gemini 3.8 Flash TTS.");
       }
 
-      // Convert raw base64 PCM/audio into proper WAV file (with browser wrapping)
-      const rawBytes = base64ToUint8Array(data.audio);
-      const wavBytes = pcmToWav(rawBytes, 24000);
-      
-      // Convert WAV Uint8Array back to Base64 to save cleanly in LocalStorage
-      const binaryString = Array.from(wavBytes)
-        .map(b => String.fromCharCode(b))
-        .join("");
-      const wavBase64 = btoa(binaryString);
-
-      // Estimate duration based on sample size (24000Hz, 16bit, mono = 48000 bytes/sec)
-      const duration = Math.max(1.0, Math.round((wavBytes.length - 44) / 48000 * 10) / 10);
+      // Estimate duration (24kHz mono 16-bit = 48,000 bytes per second)
+      const binary = atob(data.audio);
+      const estDuration = Math.max(0.5, Math.round(((binary.length - 44) / 48000) * 10) / 10);
 
       const newClip: AudioClip = {
         id: `clip_${Date.now()}`,
         modelId: activeModel.id,
         promptId: activePromptId || undefined,
-        text: studioText,
+        text: studioText.trim(),
         baseVoice: activeModel.baseVoice,
-        pitch: studioPitch,
-        speed: studioSpeed,
-        emotion: studioEmotion,
-        voiceSeed: activeModel.voiceSeed, // Saved to track seed linkage
-        audioBase64: wavBase64,
-        duration: duration,
+        styleApplied: studioStyleOverride || activeModel.styleGuidance,
+        speed: activeModel.speed,
+        pitch: activeModel.pitch,
+        duration: estDuration,
+        audioBase64: data.audio,
         createdAt: new Date().toISOString(),
+        mode: "single"
       };
 
       setAudioClips(prev => [newClip, ...prev]);
-      
-      // Automatically trigger play of newly created clip
-      handleTogglePlay(newClip);
+
+      // Automatically play synthesized clip
+      handlePlayClip(newClip);
     } catch (err: any) {
       console.error(err);
-      setGenerationError(err.message || "Synthesis failed. Please verify secret keys are configured correctly.");
+      setGenerationError(err.message || "Synthesis failed. Please verify API key configuration.");
     } finally {
-      setIsGenerating(false);
+      setIsGeneratingClip(false);
     }
   };
 
-  // Helper function to decode base64 to Uint8Array
-  const base64ToUint8Array = (base64: string): Uint8Array => {
-    const binaryString = atob(base64);
-    const len = binaryString.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    return bytes;
-  };
-
-  // Prepend a standard WAV header over raw 16-bit little-endian PCM
-  const pcmToWav = (pcmData: Uint8Array, sampleRate: number = 24000): Uint8Array => {
-    // Check if it already has a RIFF/WAVE header
-    if (
-      pcmData.length >= 12 &&
-      pcmData[0] === 0x52 && pcmData[1] === 0x49 && pcmData[2] === 0x46 && pcmData[3] === 0x46 && // 'RIFF'
-      pcmData[8] === 0x57 && pcmData[9] === 0x41 && pcmData[10] === 0x56 && pcmData[11] === 0x45    // 'WAVE'
-    ) {
-      return pcmData;
-    }
-
-    const buffer = new ArrayBuffer(44 + pcmData.byteLength);
-    const view = new DataView(buffer);
-    
-    // RIFF identifier
-    view.setUint32(0, 0x52494646, false); // "RIFF" big-endian
-    view.setUint32(4, 36 + pcmData.byteLength, true); // file size
-    view.setUint32(8, 0x57415645, false); // "WAVE" big-endian
-    
-    // fmt chunk
-    view.setUint32(12, 0x666d7420, false); // "fmt " big-endian
-    view.setUint32(16, 16, true); // size of fmt chunk
-    view.setUint16(20, 1, true); // linear PCM format
-    view.setUint16(22, 1, true); // 1 channel (mono)
-    view.setUint32(24, sampleRate, true); // sample rate
-    view.setUint32(28, sampleRate * 2, true); // byte rate (sampleRate * 1 channel * 2 bytes/sample)
-    view.setUint16(32, 2, true); // block align
-    view.setUint16(34, 16, true); // bits per sample (16-bit)
-    
-    // data chunk
-    view.setUint32(36, 0x64617461, false); // "data" big-endian
-    view.setUint32(40, pcmData.byteLength, true); // chunk size
-    
-    const output = new Uint8Array(buffer);
-    output.set(pcmData, 44);
-    return output;
-  };
-
-  const handleDeleteClip = (clipId: string) => {
-    if (playingClipId === clipId) {
-      if (audioRef.current) audioRef.current.pause();
+  // --- Audio Clip Playback Controller ---
+  const handlePlayClip = (clip: AudioClip) => {
+    if (playingClipId === clip.id) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
       setPlayingClipId(null);
-    }
-    setAudioClips(prev => prev.filter(c => c.id !== clipId));
-  };
-
-  const handleDeleteModel = (modelId: string) => {
-    if (PRESET_MODELS.some(m => m.id === modelId)) {
-      alert("Preset models cannot be deleted.");
+      if (playbackIntervalRef.current) clearInterval(playbackIntervalRef.current);
       return;
     }
-    if (confirm("Are you sure you want to delete this voice model and all associated clips?")) {
-      setVoiceModels(prev => prev.filter(m => m.id !== modelId));
-      setAudioClips(prev => prev.filter(c => c.modelId !== modelId));
-      setSelectedModelId(PRESET_MODELS[0].id);
+
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+    if (playbackIntervalRef.current) clearInterval(playbackIntervalRef.current);
+
+    setPlayingClipId(clip.id);
+    setPlaybackProgress(0);
+
+    playBase64Wav(clip.audioBase64, (audio) => {
+      audioRef.current = audio;
+      audio.onended = () => {
+        setPlayingClipId(null);
+        setPlaybackProgress(100);
+        if (playbackIntervalRef.current) clearInterval(playbackIntervalRef.current);
+      };
+
+      playbackIntervalRef.current = setInterval(() => {
+        if (audio && audio.duration) {
+          setPlaybackProgress(Math.min((audio.currentTime / audio.duration) * 100, 100));
+        }
+      }, 80);
+    });
+  };
+
+  // Helper to play base64 WAV file
+  const playBase64Wav = (base64: string, onReady: (audio: HTMLAudioElement) => void) => {
+    try {
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: "audio/wav" });
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audio.play().catch(e => console.warn("Audio autoplay blocked:", e));
+      onReady(audio);
+    } catch (err) {
+      console.error("Failed to decode WAV:", err);
     }
   };
 
-  const copyToClipboard = (text: string, id: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedScriptId(id);
-    setTimeout(() => setCopiedScriptId(null), 2000);
+  // Helper to download single WAV
+  const handleDownloadWav = (clip: AudioClip) => {
+    const binary = atob(clip.audioBase64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    const blob = new Blob([bytes], { type: "audio/wav" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `gemini38_${clip.id}.wav`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
-  // --- Export Full Dataset as ZIP (wavs + metadata.csv + metadata.json + README.md) ---
+  // Helper to export dataset as ZIP with metadata.csv
   const handleExportDatasetZip = async () => {
-    if (activeModelClips.length === 0) return;
+    if (activeModelClips.length === 0) {
+      alert("No audio clips synthesized for this model yet. Generate clips in Clip Studio first!");
+      return;
+    }
 
     const zip = new JSZip();
-    const wavsFolder = zip.folder("wavs")!;
-    
-    let csvContent = "";
-    const jsonMetadata: any[] = [];
+    const audioFolder = zip.folder("wavs");
+    let csvRows = ["audio_filename" + exportSeparator + "transcript" + exportSeparator + "speaker" + exportSeparator + "style"];
 
     activeModelClips.forEach((clip, index) => {
-      const clipIndex = index + 1;
-      const padIndex = String(clipIndex).padStart(4, "0");
-      const filename = `clip_${padIndex}.wav`;
-      
-      // Convert base64 audio to binary format
-      const rawBytes = base64ToUint8Array(clip.audioBase64);
-      wavsFolder.file(filename, rawBytes);
+      const filename = `clip_${index + 1}.wav`;
+      const binary = atob(clip.audioBase64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      audioFolder?.file(filename, bytes);
 
-      // Append row to metadata.csv
-      // e.g. wavs/clip_0001.wav|Transcript here
-      csvContent += `wavs/${filename}${exportSeparator}${clip.text}\n`;
+      const cleanTranscript = clip.text.replace(/"/g, '""').replace(/[\r\n]+/g, " ");
+      const speaker = activeModel?.name || "Speaker";
+      const style = (clip.styleApplied || "").replace(/"/g, '""');
 
-      // JSON summary
-      jsonMetadata.push({
-        file: `wavs/${filename}`,
-        text: clip.text,
-        baseVoice: clip.baseVoice,
-        pitch: clip.pitch,
-        speed: clip.speed,
-        emotion: clip.emotion || "Neutral",
-        duration_seconds: clip.duration,
-        created_at: clip.createdAt
-      });
+      csvRows.push(`wavs/${filename}${exportSeparator}"${cleanTranscript}"${exportSeparator}"${speaker}"${exportSeparator}"${style}"`);
     });
 
-    zip.file("metadata.csv", csvContent);
-    zip.file("metadata.json", JSON.stringify({
-      model_id: activeModel.id,
-      model_name: activeModel.name,
-      description: activeModel.description,
-      gender: activeModel.gender,
-      accent: activeModel.accent,
-      base_voice_template: activeModel.baseVoice,
-      recommended_pitch: activeModel.recommendedPitch,
-      recommended_speed: activeModel.recommendedSpeed,
-      narration_style: activeModel.narrationStyle,
-      clips_count: activeModelClips.length,
-      clips: jsonMetadata
-    }, null, 2));
+    zip.file("metadata.csv", csvRows.join("\n"));
 
-    // Custom crafted README.md for Alexandria Audiobook / Qwen3-TTS
-    const totalDurationSec = activeModelClips.reduce((sum, c) => sum + c.duration, 0);
-    const minutes = Math.floor(totalDurationSec / 60);
-    const seconds = Math.round(totalDurationSec % 60);
-
-    const readmeContent = `# Qwen3-TTS / CosyVoice LoRA Dataset: ${activeModel.name}
-
-This voice dataset was dynamically designed and synthesized using **Gemini TTS** inside the **AI Voice Model & LoRA Dataset Studio** to train a high-fidelity speech LoRA clone.
-
-## Dataset Overview
-- **Speaker Name:** ${activeModel.name}
-- **Persona:** ${activeModel.gender} (${activeModel.accent} Accent)
-- **Narration Style:** ${activeModel.narrationStyle}
-- **Base Voice Template:** ${activeModel.baseVoice}
-- **Total Audio Clips:** ${activeModelClips.length}
-- **Total Dataset Duration:** ${minutes}m ${seconds}s (ideal for quick voice clones)
-- **Audio Specifications:** 24,000Hz Sample Rate, 16-bit, Mono WAV
-
-## Folder Layout
-\`\`\`
-├── wavs/
-│   ├── clip_0001.wav
-│   ├── clip_0002.wav
-│   └── ...
-├── metadata.csv
-├── metadata.json
-└── README.md
-\`\`\`
-
-## LoRA Finetuning Instructions (Alexandria & Qwen3-TTS)
-
-Following the [Alexandria Audiobook Qwen3-TTS LoRA Guide](https://github.com/Finrandojin/alexandria-audiobook/blob/main/lora.md):
-
-1. **Upload Dataset:** Upload this unpacked ZIP structure to your GPU machine (e.g. RunPod, Colab) or your local training workspace.
-2. **Setup Environment:**
-   \`\`\`bash
-   git clone https://github.com/instavar/qwen3-tts-lora-finetuning
-   cd qwen3-tts-lora-finetuning
-   pip install -r requirements.txt
-   \`\`\`
-3. **Configure Dataset Paths:**
-   Move this directory to \`data/${activeModel.name.toLowerCase().replace(/\s+/g, "_")}\` and reference \`metadata.csv\` inside your training YAML config file.
-4. **Recommended Training Configuration:**
-   - **Batch Size:** 4
-   - **Learning Rate:** 1e-4
-   - **Epochs:** 8 to 12 (depending on dataset size)
-   - **LoRA Rank (r):** 16
-   - **LoRA Alpha:** 32
-   - **Target Modules:** \`q_proj, v_proj, k_proj, o_proj\` inside the audio encoder.
-
-Generated automatically with ❤️ by Gemini.
+    const readme = `# LoRA / TTS Training Dataset - ${activeModel?.name || "Voice Persona"}
+Synthesized with native Gemini 3.8 Flash TTS.
+- Base Resonance: ${activeModel?.baseVoice}
+- Accent / Dialect: ${activeModel?.accent}
+- Performance Style: ${activeModel?.styleGuidance}
+- Sample Rate: 24,000Hz WAV (Mono, 16-bit LE)
+- Total Clips: ${activeModelClips.length}
 `;
+    zip.file("README.md", readme);
 
-    zip.file("README.md", readmeContent);
-
-    // Generate ZIP blob and trigger download
-    const zipBlob = await zip.generateAsync({ type: "blob" });
-    const url = URL.createObjectURL(zipBlob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${activeModel.name.toLowerCase().replace(/\s+/g, "_")}_lora_dataset.zip`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
-  const handleDownloadSingleWav = (clip: AudioClip) => {
-    const rawBytes = base64ToUint8Array(clip.audioBase64);
-    const blob = new Blob([rawBytes], { type: "audio/wav" });
+    const blob = await zip.generateAsync({ type: "blob" });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${activeModel.name.toLowerCase().replace(/\s+/g, "_")}_${clip.id}.wav`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${(activeModel?.name || "voice_model").toLowerCase().replace(/\s+/g, "_")}_dataset.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 
-  const totalDuration = activeModelClips.reduce((sum, c) => sum + c.duration, 0);
-  const totalMin = Math.floor(totalDuration / 60);
-  const totalSec = Math.round(totalDuration % 60);
+  // Insert tag helper
+  const handleInsertTag = (tag: string, targetSetter: React.Dispatch<React.SetStateAction<string>>) => {
+    targetSetter(prev => `${prev} ${tag} `);
+  };
+
+  // Generate dynamic waveform bars for visualizer
+  const renderWaveBars = (base64: string, isPlaying: boolean, progress: number) => {
+    const barsCount = 36;
+    const bars = [];
+    for (let i = 0; i < barsCount; i++) {
+      const heightPercent = 25 + Math.abs(Math.sin((i * 1.5) + (base64.charCodeAt(i % base64.length) || 0))) * 65;
+      const isPassed = isPlaying && (i / barsCount) * 100 <= progress;
+      bars.push(
+        <div
+          key={i}
+          className={`flex-1 rounded-full transition-all duration-100 ${
+            isPassed ? "bg-indigo-400" : isPlaying ? "bg-slate-700" : "bg-slate-800"
+          }`}
+          style={{ height: `${heightPercent}%`, transform: isPassed ? "scaleY(1.2)" : "scaleY(1)" }}
+        />
+      );
+    }
+    return bars;
+  };
 
   return (
-    <div id="root-container" className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col selection:bg-indigo-500 selection:text-white">
-      {/* HEADER SECTION */}
-      <header id="app-header" className="border-b border-slate-800 bg-slate-900/60 backdrop-blur-md px-6 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 sticky top-0 z-40">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+      {/* HEADER BAR */}
+      <header className="border-b border-slate-800/80 bg-slate-900/70 backdrop-blur-md px-6 py-3.5 flex flex-col md:flex-row md:items-center md:justify-between gap-4 sticky top-0 z-40">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-indigo-600 rounded-xl text-white shadow-lg shadow-indigo-600/20 flex items-center justify-center">
-            <Volume2 className="h-6 w-6 animate-pulse" />
+          <div className="p-2.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl text-white shadow-lg shadow-indigo-500/20">
+            <Volume2 className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="text-xl md:text-2xl font-bold font-display tracking-tight text-white flex items-center gap-2">
-              Voice Model &amp; LoRA Dataset Studio
-              <span className="text-[10px] uppercase font-mono tracking-wider px-2 py-0.5 bg-indigo-500/20 text-indigo-300 rounded border border-indigo-500/30">
-                Gemini Multi-Modal
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold font-display tracking-tight text-white">
+                Gemini 3.8 Flash TTS Studio
+              </h1>
+              <span className="text-[10px] uppercase font-mono font-bold tracking-wider px-2 py-0.5 bg-indigo-500/20 text-indigo-300 rounded border border-indigo-500/30">
+                Flagship Audio
               </span>
-            </h1>
-            <p className="text-xs text-slate-400">Design speech profiles, record training clips, and export compliant datasets for Qwen3-TTS &amp; CosyVoice.</p>
+            </div>
+            <p className="text-xs text-slate-400">Multi-speaker audiobook production, ACX compliance mastering, uninhibited voice design, and Pro M4B packaging.</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 bg-slate-950/60 p-1 rounded-lg border border-slate-800 self-start md:self-auto">
-          <span className="text-xs font-medium px-3 py-1.5 text-slate-400">Select Voice:</span>
-          <select
-            value={selectedModelId}
-            onChange={(e) => {
-              setSelectedModelId(e.target.value);
-              setActivePromptId(null);
-            }}
-            className="bg-slate-900 border border-slate-800 text-sm text-slate-100 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
-          >
-            {voiceModels.map(model => (
-              <option key={model.id} value={model.id}>
-                {model.name} {PRESET_MODELS.some(p => p.id === model.id) ? "• Preset" : "• Designed"}
-              </option>
-            ))}
-          </select>
-        </div>
-      </header>
-
-      {/* MAIN BODY GRID */}
-      <main id="app-main" className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
-        
-        {/* LEFT COLUMN: VOICE MODELS LIST & SYSTEM STATS */}
-        <section id="sidebar-panel" className="lg:col-span-1 flex flex-col gap-5">
-          
-          {/* VOICE MODEL MANAGEMENT */}
-          <div className="bg-slate-900 rounded-xl border border-slate-800 p-4 flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xs uppercase font-mono tracking-wider font-semibold text-slate-400">My Voice Models</h2>
-              <button 
-                onClick={() => setActiveTab("designer")}
-                className="text-xs flex items-center gap-1 text-indigo-400 hover:text-indigo-300 transition-colors font-medium cursor-pointer"
+        {/* Global Active Voice Selector & Blank Voice Action */}
+        <div className="flex items-center gap-2">
+          {voiceModels.length > 0 && (
+            <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-lg p-1">
+              <span className="text-xs text-slate-400 pl-2">Active:</span>
+              <select
+                value={selectedModelId}
+                onChange={(e) => setSelectedModelId(e.target.value)}
+                className="bg-slate-900 border border-slate-700 text-xs text-slate-100 rounded px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium"
               >
-                <Plus className="h-3.5 w-3.5" /> Design New
-              </button>
-            </div>
-
-            <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-1">
-              {voiceModels.map((model) => {
-                const isSelected = model.id === selectedModelId;
-                const isPreset = PRESET_MODELS.some(p => p.id === model.id);
-                return (
-                  <div 
-                    key={model.id}
-                    onClick={() => {
-                      setSelectedModelId(model.id);
-                      setActivePromptId(null);
-                    }}
-                    className={`p-3 rounded-lg border text-left cursor-pointer transition-all flex items-start justify-between gap-2 group ${
-                      isSelected 
-                        ? "bg-slate-800/80 border-indigo-500/70 shadow-md" 
-                        : "bg-slate-950/40 border-slate-800 hover:bg-slate-900 hover:border-slate-700"
-                    }`}
-                  >
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-sm font-semibold text-slate-200 truncate group-hover:text-white">{model.name}</span>
-                      <span className="text-[11px] text-slate-400 truncate">{model.narrationStyle}</span>
-                    </div>
-                    {!isPreset && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteModel(model.id);
-                        }}
-                        className="text-slate-500 hover:text-rose-400 p-1 rounded transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-                        title="Delete Model"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* API CREDENTIALS PANEL */}
-          <div className="bg-slate-900 rounded-xl border border-slate-800 p-4 flex flex-col gap-3.5">
-            <div className="flex items-center gap-2 border-b border-slate-800/60 pb-2">
-              <Key className="h-4 w-4 text-indigo-400" />
-              <h2 className="text-xs uppercase font-mono tracking-wider font-semibold text-slate-300">API Credentials</h2>
-            </div>
-
-            {/* Provider Selector */}
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Active AI Designer:</label>
-              <div className="grid grid-cols-2 gap-1 bg-slate-950 p-0.5 rounded-lg border border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setApiProvider("google")}
-                  className={`text-[11px] py-1 rounded-md font-medium transition-all ${
-                    apiProvider === "google"
-                      ? "bg-indigo-600 text-white shadow-sm"
-                      : "text-slate-400 hover:text-slate-200"
-                  }`}
-                >
-                  Google AI
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setApiProvider("openrouter")}
-                  className={`text-[11px] py-1 rounded-md font-medium transition-all ${
-                    apiProvider === "openrouter"
-                      ? "bg-indigo-600 text-white shadow-sm"
-                      : "text-slate-400 hover:text-slate-200"
-                  }`}
-                >
-                  OpenRouter
-                </button>
-              </div>
-            </div>
-
-            {/* Google AI Key Input */}
-            <div className="flex flex-col gap-1.5">
-              <div className="flex justify-between items-center">
-                <label className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Google AI API Key:</label>
-                <button
-                  type="button"
-                  onClick={() => setShowGoogleKey(!showGoogleKey)}
-                  className="text-[10px] text-indigo-400 hover:text-indigo-300 flex items-center gap-0.5 font-medium"
-                >
-                  {showGoogleKey ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                  {showGoogleKey ? "Hide" : "Show"}
-                </button>
-              </div>
-              <input
-                type={showGoogleKey ? "text" : "password"}
-                value={googleApiKey}
-                onChange={(e) => setGoogleApiKey(e.target.value)}
-                placeholder="Using server key (optional)..."
-                className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-600"
-              />
-            </div>
-
-            {/* OpenRouter Key & Model Input */}
-            <div className="flex flex-col gap-2.5 border-t border-slate-800/60 pt-2.5">
-              <div className="flex flex-col gap-1.5">
-                <div className="flex justify-between items-center">
-                  <label className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">OpenRouter API Key:</label>
-                  <button
-                    type="button"
-                    onClick={() => setShowOpenRouterKey(!showOpenRouterKey)}
-                    className="text-[10px] text-indigo-400 hover:text-indigo-300 flex items-center gap-0.5 font-medium"
-                  >
-                    {showOpenRouterKey ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                    {showOpenRouterKey ? "Hide" : "Show"}
-                  </button>
-                </div>
-                <input
-                  type={showOpenRouterKey ? "text" : "password"}
-                  value={openRouterApiKey}
-                  onChange={(e) => setOpenRouterApiKey(e.target.value)}
-                  placeholder="sk-or-..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-600"
-                />
-              </div>
-
-              {/* OpenRouter Model Selection */}
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">OpenRouter Model:</label>
-                <select
-                  value={
-                    ["google/gemini-2.5-flash", "google/gemini-2.5-pro", "meta-llama/llama-3.1-8b-instruct", "meta-llama/llama-3.3-70b-instruct", "deepseek/deepseek-chat"].includes(openRouterModel)
-                      ? openRouterModel
-                      : "custom"
-                  }
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val !== "custom") {
-                      setOpenRouterModel(val);
-                    } else {
-                      setOpenRouterModel("");
-                    }
-                  }}
-                  className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium"
-                >
-                  <option value="google/gemini-2.5-flash">Gemini 2.5 Flash</option>
-                  <option value="google/gemini-2.5-pro">Gemini 2.5 Pro</option>
-                  <option value="meta-llama/llama-3.1-8b-instruct">Llama 3.1 8B Instruct</option>
-                  <option value="meta-llama/llama-3.3-70b-instruct">Llama 3.3 70B Instruct</option>
-                  <option value="deepseek/deepseek-chat">DeepSeek Chat (V3)</option>
-                  <option value="custom">-- Custom Model --</option>
-                </select>
-
-                {!["google/gemini-2.5-flash", "google/gemini-2.5-pro", "meta-llama/llama-3.1-8b-instruct", "meta-llama/llama-3.3-70b-instruct", "deepseek/deepseek-chat"].includes(openRouterModel) && (
-                  <input
-                    type="text"
-                    value={openRouterModel}
-                    onChange={(e) => setOpenRouterModel(e.target.value)}
-                    placeholder="Enter model (e.g. qwen/qwen-2.5-72b-instruct)"
-                    className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 mt-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  />
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* TRAINING METRICS PANEL */}
-          <div className="bg-slate-900 rounded-xl border border-slate-800 p-4 flex flex-col gap-4">
-            <h2 className="text-xs uppercase font-mono tracking-wider font-semibold text-slate-400">Dataset Metrics</h2>
-            
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-slate-950/40 p-3 rounded-lg border border-slate-800 flex flex-col">
-                <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">Recorded</span>
-                <span className="text-xl font-bold text-white mt-1">{activeModelClips.length} clips</span>
-              </div>
-              <div className="bg-slate-950/40 p-3 rounded-lg border border-slate-800 flex flex-col">
-                <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">Total Duration</span>
-                <span className="text-xl font-bold text-white mt-1">{totalMin}m {totalSec}s</span>
-              </div>
-            </div>
-
-            {/* PROGRESS GRAPH */}
-            <div className="flex flex-col gap-2">
-              <div className="flex justify-between text-xs font-mono">
-                <span className="text-slate-400">LoRA Readiness:</span>
-                <span className="font-semibold text-indigo-400">
-                  {Math.min(100, Math.round((activeModelClips.length / 10) * 100))}%
-                </span>
-              </div>
-              <div className="h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
-                <div 
-                  className="h-full bg-indigo-500 rounded-full transition-all duration-500"
-                  style={{ width: `${Math.min(100, (activeModelClips.length / 10) * 100)}%` }}
-                />
-              </div>
-              <span className="text-[10px] text-slate-500 mt-1 leading-normal">
-                {activeModelClips.length < 5 
-                  ? "⚠️ Record at least 5-10 high-quality clips to assemble a viable voice LoRA clone."
-                  : "✅ Dataset contains healthy phonetic variations. Ready for export!"}
-              </span>
-            </div>
-          </div>
-
-          {/* EXPORT DATASET SETTINGS */}
-          {activeModelClips.length > 0 && (
-            <div className="bg-indigo-950/20 rounded-xl border border-indigo-900/40 p-4 flex flex-col gap-3">
-              <div className="flex items-center gap-2">
-                <Settings2 className="h-4 w-4 text-indigo-400" />
-                <h2 className="text-xs uppercase font-mono tracking-wider font-semibold text-indigo-300">Dataset Customizer</h2>
-              </div>
-              
-              <div className="flex flex-col gap-3 mt-1 text-xs">
-                <div>
-                  <label className="text-slate-400 block mb-1">Target Format:</label>
-                  <select 
-                    value={exportFormat}
-                    onChange={(e: any) => setExportFormat(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  >
-                    <option value="alexandria">Alexandria Audiobook (qwen3-tts)</option>
-                    <option value="cosyvoice">CosyVoice (metadata.csv format)</option>
-                    <option value="standard">Standard Pitch/Emotion Dataset</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-slate-400 block mb-1">CSV Column Separator:</label>
-                  <div className="flex gap-4 mt-1">
-                    <label className="flex items-center gap-1.5 cursor-pointer text-slate-300">
-                      <input 
-                        type="radio" 
-                        name="separator" 
-                        value="|" 
-                        checked={exportSeparator === "|"}
-                        onChange={() => setExportSeparator("|")}
-                        className="text-indigo-500 focus:ring-0 bg-slate-900 border-slate-700" 
-                      />
-                      Pipe ( | )
-                    </label>
-                    <label className="flex items-center gap-1.5 cursor-pointer text-slate-300">
-                      <input 
-                        type="radio" 
-                        name="separator" 
-                        value="," 
-                        checked={exportSeparator === ","}
-                        onChange={() => setExportSeparator(",")}
-                        className="text-indigo-500 focus:ring-0 bg-slate-900 border-slate-700" 
-                      />
-                      Comma ( , )
-                    </label>
-                  </div>
-                </div>
-
-                <button
-                  onClick={handleExportDatasetZip}
-                  className="w-full bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 mt-2 transition-colors cursor-pointer shadow-lg shadow-indigo-600/10"
-                >
-                  <FolderDown className="h-4 w-4" /> Export Dataset (ZIP)
-                </button>
-              </div>
+                {voiceModels.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name} ({m.baseVoice} • {m.accent.split("(")[0].trim()})
+                  </option>
+                ))}
+              </select>
             </div>
           )}
 
-        </section>
+          <button
+            onClick={() => setShowVoiceSidebar(!showVoiceSidebar)}
+            className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border transition-colors cursor-pointer ${
+              showVoiceSidebar
+                ? "bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-600/20"
+                : "bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-800"
+            }`}
+            title="Toggle Voice Models & 6-Voice Acoustic Roster drawer"
+          >
+            <Layers className="h-4 w-4 text-indigo-400" />
+            <span>Voice Models ({voiceModels.length})</span>
+          </button>
 
-        {/* RIGHT COLUMN: WORKSPACE PANELS & TABS */}
-        <section id="workspace-panel" className="lg:col-span-3 flex flex-col bg-slate-900 rounded-xl border border-slate-800 overflow-hidden shadow-xl">
-          
-          {/* TAB HEADERS */}
-          <div className="flex border-b border-slate-800 bg-slate-950/40 p-1">
-            <button
-              onClick={() => setActiveTab("studio")}
-              className={`flex-1 py-3 text-center text-sm font-medium transition-colors flex items-center justify-center gap-2 border-b-2 cursor-pointer ${
-                activeTab === "studio" 
-                  ? "border-indigo-500 text-white" 
-                  : "border-transparent text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              <Mic className="h-4 w-4" /> Clip Studio
-            </button>
-            <button
-              onClick={() => setActiveTab("library")}
-              className={`flex-1 py-3 text-center text-sm font-medium transition-colors flex items-center justify-center gap-2 border-b-2 cursor-pointer relative ${
-                activeTab === "library" 
-                  ? "border-indigo-500 text-white" 
-                  : "border-transparent text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              <BookOpen className="h-4 w-4" /> Library ({activeModelClips.length})
-            </button>
-            <button
-              onClick={() => setActiveTab("designer")}
-              className={`flex-1 py-3 text-center text-sm font-medium transition-colors flex items-center justify-center gap-2 border-b-2 cursor-pointer ${
-                activeTab === "designer" 
-                  ? "border-indigo-500 text-white" 
-                  : "border-transparent text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              <Sparkles className="h-4 w-4 text-amber-400 animate-pulse" /> Gemini Voice Designer
-            </button>
-          </div>
+          <button
+            onClick={handleCreateBlankVoice}
+            className="bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-semibold text-xs py-2 px-3 rounded-lg flex items-center gap-1.5 transition-colors shadow-md shadow-indigo-600/20 cursor-pointer"
+          >
+            <Plus className="h-3.5 w-3.5" /> New Voice
+          </button>
+        </div>
+      </header>
 
-          {/* TAB CONTENT PANELS */}
-          <div className="p-6 flex-1 flex flex-col">
+      {/* FULL WIDTH MAIN CONTAINER */}
+      <main className="flex-1 w-full px-4 lg:px-8 py-5 flex flex-col gap-5">
+        
+        {/* TOP TAB BAR: ALL PRODUCTION TABS */}
+        <div className="flex border-b border-slate-800 bg-slate-950/80 p-1.5 rounded-xl gap-1 overflow-x-auto w-full shadow-lg">
+          <button
+            onClick={() => setActiveTab("audiobook")}
+            className={`px-4 py-2.5 text-xs font-bold transition-all flex items-center gap-2 rounded-lg whitespace-nowrap cursor-pointer ${
+              activeTab === "audiobook"
+                ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/20"
+                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+            }`}
+          >
+            <BookOpen className="h-4 w-4 text-emerald-400" /> Multi-Speaker Audiobook Studio
+          </button>
 
-            {/* TAB: STUDIO SYNTHESIZER */}
-            {activeTab === "studio" && (
-              <div className="flex flex-col gap-6 flex-1">
-                
-                {/* ACTIVE MODEL SUMMARY HEADER */}
-                <div className="bg-slate-950/40 p-4 rounded-lg border border-slate-800/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="flex flex-col">
-                    <span className="text-xs font-mono text-indigo-400 uppercase tracking-wider">Voice Profile</span>
-                    <h3 className="text-lg font-bold text-white mt-1">{activeModel.name || "Custom Voice Model"}</h3>
-                    <p className="text-xs text-slate-400 mt-1 leading-relaxed">{activeModel.description || "Designed with Gemini."}</p>
-                    <div className="flex flex-wrap gap-2 mt-2.5">
-                      <span className="text-[10px] font-mono px-2 py-0.5 bg-slate-800 text-slate-300 rounded border border-slate-700">
-                        Gender: {activeModel.gender || "Neutral"}
-                      </span>
-                      <span className="text-[10px] font-mono px-2 py-0.5 bg-slate-800 text-slate-300 rounded border border-slate-700">
-                        Accent: {activeModel.accent || "Standard"}
-                      </span>
-                      <span className="text-[10px] font-mono px-2 py-0.5 bg-slate-800 text-slate-300 rounded border border-slate-700">
-                        Base Config: {activeModel.baseVoice || "Kore"}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* STYLE INSTRUCTIONS CARD */}
-                  <div className="md:w-1/3 bg-slate-900/90 p-3 rounded-lg border border-slate-800 flex flex-col gap-1.5 self-stretch justify-center">
-                    <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">Organic Style Guide</span>
-                    <p className="text-xs text-slate-300 italic leading-snug">"{activeModel.prosodyInstructions || 'None specified'}"</p>
-                  </div>
-                </div>
+          <button
+            onClick={() => setActiveTab("m4b")}
+            className={`px-4 py-2.5 text-xs font-bold transition-all flex items-center gap-2 rounded-lg whitespace-nowrap cursor-pointer ${
+              activeTab === "m4b"
+                ? "bg-purple-600 text-white shadow-lg shadow-purple-600/20"
+                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+            }`}
+          >
+            <Headphones className="h-4 w-4 text-purple-400" /> Pro M4B Creator
+          </button>
 
-                {/* AI VOICE SEED ANCHOR & LOCK PANEL */}
-                <div className="bg-slate-900/30 p-4 rounded-lg border border-indigo-500/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="flex flex-col gap-1 max-w-xl">
-                    <span className="text-xs font-mono text-emerald-400 uppercase tracking-wider flex items-center gap-1.5 font-bold">
-                      <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                      Locked AI Voice Seed Anchor (Consistent Acoustics)
-                    </span>
-                    <p className="text-xs text-slate-300">
-                      This unique seed anchors the throat thickness, physical vocal tract length, and resonance styling of <strong className="text-white">{activeModel.name || "Custom Voice Model"}</strong>. It ensures the voice stays identical across all generated scripts, preventing different voices or acoustics.
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2.5 bg-slate-950 p-2 rounded-lg border border-slate-800 shrink-0">
-                    <input
-                      type="text"
-                      value={activeModel.voiceSeed || ""}
-                      onChange={(e) => handleUpdateVoiceSeed(e.target.value)}
-                      placeholder="e.g. SEED-4123-MALE-GRAVEL-FENRIR"
-                      className="bg-slate-900 border border-slate-800 rounded px-2.5 py-1 text-xs text-indigo-300 font-mono tracking-wider focus:outline-none focus:ring-1 focus:ring-indigo-500 w-48 text-center"
-                    />
-                    <button
-                      onClick={handleGenerateRandomSeed}
-                      className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs px-2.5 py-1 rounded cursor-pointer transition-all"
-                      title="Generate a completely new voice timber signature seed"
-                    >
-                      Regen Seed
-                    </button>
-                  </div>
-                </div>
+          <button
+            onClick={() => setActiveTab("acx")}
+            className={`px-4 py-2.5 text-xs font-bold transition-all flex items-center gap-2 rounded-lg whitespace-nowrap cursor-pointer ${
+              activeTab === "acx"
+                ? "bg-amber-600 text-white shadow-lg shadow-amber-600/20"
+                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+            }`}
+          >
+            <ShieldCheck className="h-4 w-4 text-amber-400" /> ACX Audio Mastering
+          </button>
 
-                {/* TWO COLUMN STUDIO WORKSPACE */}
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-6 flex-1 items-start">
-                  
-                  {/* SCRIPTS RECOMMENDATIONS BOX (LEFT 2 COLS) */}
-                  <div className="md:col-span-2 flex flex-col gap-3">
-                    <div className="flex items-center gap-2">
-                      <BookOpen className="h-4 w-4 text-indigo-400" />
-                      <h4 className="text-xs uppercase font-mono tracking-wider font-semibold text-slate-400">Recommended LoRA Scripts</h4>
-                    </div>
+          <button
+            onClick={() => setActiveTab("lora")}
+            className={`px-4 py-2.5 text-xs font-bold transition-all flex items-center gap-2 rounded-lg whitespace-nowrap cursor-pointer ${
+              activeTab === "lora" || activeTab === "library"
+                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20"
+                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+            }`}
+          >
+            <Database className="h-4 w-4 text-indigo-400" /> LoRA Training / Dataset Studio ({audioClips.length})
+          </button>
 
-                    <div className="flex flex-col gap-2.5 max-h-[360px] overflow-y-auto pr-1">
-                      {(activeModel.trainingPrompts || []).map((prompt) => {
-                        const hasClip = audioClips.some(c => c.promptId === prompt.id);
-                        const isSelectedPrompt = prompt.id === activePromptId;
-                        return (
-                          <div
-                            key={prompt.id}
-                            onClick={() => handleLoadPrompt(prompt)}
-                            className={`p-3 rounded-lg border text-left cursor-pointer transition-all flex flex-col gap-2 relative ${
-                              isSelectedPrompt 
-                                ? "bg-slate-800/80 border-indigo-500" 
-                                : "bg-slate-950/40 border-slate-800/80 hover:bg-slate-900/60 hover:border-slate-700"
-                            }`}
-                          >
-                            <div className="flex items-center justify-between text-[11px] font-mono">
-                              <span className="text-indigo-400 font-semibold">{prompt.emotion}</span>
-                              <div className="flex items-center gap-1">
-                                {hasClip && (
-                                  <span className="text-emerald-400 flex items-center gap-0.5 text-[10px]">
-                                    <CheckCircle2 className="h-3 w-3" /> Recorded
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            <p className="text-xs text-slate-200 font-medium leading-relaxed">{prompt.text}</p>
-                            <div className="flex items-center justify-between mt-1 text-[10px] text-slate-500 font-mono">
-                              <span>Focus: {prompt.focus}</span>
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  copyToClipboard(prompt.text, prompt.id);
-                                }}
-                                className="hover:text-white p-1 rounded transition-colors"
-                                title="Copy Text"
-                              >
-                                {copiedScriptId === prompt.id ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+          <button
+            onClick={() => setActiveTab("screenplay")}
+            className={`px-4 py-2.5 text-xs font-bold transition-all flex items-center gap-2 rounded-lg whitespace-nowrap cursor-pointer ${
+              activeTab === "screenplay"
+                ? "bg-cyan-600 text-white shadow-lg shadow-cyan-600/20"
+                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+            }`}
+          >
+            <Film className="h-4 w-4 text-cyan-400" /> Multi-Speaker Screenplay
+          </button>
 
-                  {/* SYNTHESIS ENGINE (RIGHT 3 COLS) */}
-                  <div className="md:col-span-3 flex flex-col gap-4">
-                    
-                    {/* SCRIPT INPUT BOX */}
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex justify-between items-center text-xs">
-                        <label className="font-semibold text-slate-300">Synthesis Script</label>
-                        <span className="text-slate-500 font-mono">{studioText.length}/300 chars</span>
-                      </div>
-                      <textarea
-                        value={studioText}
-                        onChange={(e) => {
-                          setStudioText(e.target.value);
-                          if (activePromptId) setActivePromptId(null);
-                        }}
-                        placeholder="Type script sentence or click a recommended LoRA script on the left..."
-                        maxLength={300}
-                        rows={4}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed placeholder-slate-600"
-                      />
-                    </div>
+          <button
+            onClick={() => setActiveTab("designer")}
+            className={`px-4 py-2.5 text-xs font-bold transition-all flex items-center gap-2 rounded-lg whitespace-nowrap cursor-pointer ${
+              activeTab === "designer"
+                ? "bg-pink-600 text-white shadow-lg shadow-pink-600/20"
+                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+            }`}
+          >
+            <Wand2 className="h-4 w-4 text-pink-400" /> Voice Designer
+          </button>
 
-                    {/* PROSODY PARAMETERS */}
-                    <div className="grid grid-cols-2 gap-4 bg-slate-950/20 p-4 rounded-lg border border-slate-800">
-                      
-                      {/* EMOTION */}
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-xs text-slate-400 font-mono uppercase tracking-wider">Tone / Emotion</label>
-                        <select
-                          value={studioEmotion}
-                          onChange={(e) => setStudioEmotion(e.target.value)}
-                          className="bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium"
-                        >
-                          <option value="Neutral">Neutral / Standard</option>
-                          <option value="Cheerful">Cheerful / Excited</option>
-                          <option value="Dramatic">Dramatic / Intense</option>
-                          <option value="Serious">Serious / Stern</option>
-                          <option value="Whispering">Whispering / Intimate</option>
-                          <option value="Sad">Sad / Mournful</option>
-                          <option value="Warm">Warm / Comforting</option>
-                        </select>
-                      </div>
+          <button
+            onClick={() => setActiveTab("studio")}
+            className={`px-4 py-2.5 text-xs font-bold transition-all flex items-center gap-2 rounded-lg whitespace-nowrap cursor-pointer ${
+              activeTab === "studio"
+                ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
+                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+            }`}
+          >
+            <Mic className="h-4 w-4 text-blue-400" /> Clip Studio
+          </button>
+        </div>
 
-                      {/* PITCH */}
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-xs text-slate-400 font-mono uppercase tracking-wider">Vocal Pitch</label>
-                        <select
-                          value={studioPitch}
-                          onChange={(e) => setStudioPitch(e.target.value)}
-                          className="bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium"
-                        >
-                          <option value="Low">Low (Gravelly)</option>
-                          <option value="Medium-Low">Medium-Low</option>
-                          <option value="Medium">Medium (Default)</option>
-                          <option value="Medium-High">Medium-High</option>
-                          <option value="High">High (Bright)</option>
-                        </select>
-                      </div>
+        {/* WORKSPACE CANVAS (FULL WIDTH) */}
+        <section className="w-full flex-1 flex flex-col bg-slate-900/90 rounded-xl border border-slate-800 overflow-hidden shadow-2xl">
+          <div className="p-6 flex-1 flex flex-col w-full">
 
-                      {/* SPEED SLIDER */}
-                      <div className="flex flex-col gap-1.5 col-span-2">
-                        <div className="flex justify-between text-xs text-slate-400 font-mono uppercase tracking-wider">
-                          <span>Speech Pace / Speed</span>
-                          <span className="text-indigo-400 font-bold">{studioSpeed.toFixed(2)}x</span>
-                        </div>
-                        <input
-                          type="range"
-                          min="0.70"
-                          max="1.40"
-                          step="0.05"
-                          value={studioSpeed}
-                          onChange={(e) => setStudioSpeed(parseFloat(e.target.value))}
-                          className="w-full accent-indigo-500 cursor-pointer h-1.5 bg-slate-900 rounded-lg appearance-none"
-                        />
-                        <div className="flex justify-between text-[10px] text-slate-600 font-mono">
-                          <span>0.70x (Slow)</span>
-                          <span>1.00x (Standard)</span>
-                          <span>1.40x (Fast)</span>
-                        </div>
-                      </div>
-
-                      {/* STYLE CUES INSTRUCTIONS */}
-                      <div className="flex flex-col gap-1.5 col-span-2 mt-1">
-                        <label className="text-xs text-slate-400 font-mono uppercase tracking-wider">Style Cues</label>
-                        <input
-                          type="text"
-                          value={customStyleCues}
-                          onChange={(e) => setCustomStyleCues(e.target.value)}
-                          placeholder="e.g., Speak gravelly, slowly, with a dramatic pause..."
-                          className="bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                        />
-                      </div>
-
-                    </div>
-
-                    {/* GENERATION CTA AND STATUS */}
-                    <div className="flex flex-col gap-2 mt-2">
-                      <button
-                        onClick={handleGenerateAudio}
-                        disabled={isGenerating || !studioText.trim()}
-                        className={`w-full font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer ${
-                          isGenerating 
-                            ? "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700" 
-                            : !studioText.trim()
-                              ? "bg-slate-800/40 text-slate-600 border border-slate-800/80 cursor-not-allowed"
-                              : "bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white shadow-indigo-600/10"
-                        }`}
-                      >
-                        {isGenerating ? (
-                          <>
-                            <div className="h-4 w-4 border-2 border-slate-500 border-t-white rounded-full animate-spin" />
-                            Synthesizing High-Quality WAV Audio...
-                          </>
-                        ) : (
-                          <>
-                            <Volume2 className="h-4 w-4" /> Synthesize &amp; Save Clip
-                          </>
-                        )}
-                      </button>
-
-                      {generationError && (
-                        <div className="bg-rose-950/20 text-rose-300 border border-rose-900/40 p-3 rounded-lg text-xs flex items-start gap-2.5">
-                          <AlertCircle className="h-4 w-4 shrink-0 text-rose-400 mt-0.5" />
-                          <span className="leading-normal">{generationError}</span>
-                        </div>
-                      )}
-                    </div>
-
-                  </div>
-
-                </div>
-
-              </div>
+            {/* TAB: AUDIOBOOK STUDIO */}
+            {activeTab === "audiobook" && (
+              <AudiobookStudio
+                voiceModels={voiceModels}
+                googleApiKey={googleApiKey}
+                project={audiobookProject}
+                onUpdateProject={handleUpdateAudiobookProject}
+              />
             )}
 
-            {/* TAB: LOCAL CLIP LIBRARY */}
-            {activeTab === "library" && (
+            {/* TAB: PRO M4B CREATOR */}
+            {activeTab === "m4b" && (
+              <M4BCreatorPanel
+                project={audiobookProject}
+                onUpdateProject={handleUpdateAudiobookProject}
+                onSwitchToTab={(t) => {
+                  if (t === "import" || t === "director") setActiveTab("audiobook");
+                  else if (t === "acx") setActiveTab("acx");
+                }}
+              />
+            )}
+
+            {/* TAB: ACX AUDIO MASTERING */}
+            {activeTab === "acx" && (
+              <ACXMasteringPanel
+                project={audiobookProject}
+                activeChapter={activeChapter}
+                onUpdateChapter={(up) => {
+                  const updatedChs = audiobookProject.chapters.map(c => c.id === up.id ? up : c);
+                  handleUpdateAudiobookProject({ ...audiobookProject, chapters: updatedChs });
+                }}
+                onUpdateChunk={(chunkId, upChunk) => {
+                  const updatedChs = audiobookProject.chapters.map(c => ({
+                    ...c,
+                    chunks: c.chunks.map(k => k.id === chunkId ? { ...k, ...upChunk } : k)
+                  }));
+                  handleUpdateAudiobookProject({ ...audiobookProject, chapters: updatedChs });
+                }}
+                onUpdateAllChapters={(chs) => handleUpdateAudiobookProject({ ...audiobookProject, chapters: chs })}
+              />
+            )}
+
+            {/* TAB: MULTI-SPEAKER SCREENPLAY */}
+            {activeTab === "screenplay" && (
+              <DialogueStudio voiceModels={voiceModels} googleApiKey={googleApiKey} />
+            )}
+
+            {/* TAB: ADVANCED VOICE DESIGNER */}
+            {activeTab === "designer" && (
               <div className="flex flex-col gap-6 flex-1">
                 
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                {/* Header & Mode Switcher */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
                   <div>
-                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                      Recorded Audio Library
-                      <span className="text-xs font-mono font-normal px-2.5 py-0.5 bg-indigo-500/10 text-indigo-400 rounded-full border border-indigo-500/20">
-                        {activeModelClips.length} Clips
-                      </span>
-                    </h3>
-                    <p className="text-xs text-slate-400 mt-1">Listen to and download generated clips, or customize and export the full LoRA dataset.</p>
+                    <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                      <Sparkles className="h-5 w-5 text-amber-400" />
+                      Gemini 3.8 Voice Designer
+                    </h2>
+                    <p className="text-xs text-slate-400">Design your vocal profile using direct parameters or draft automatically with AI.</p>
                   </div>
 
-                  {activeModelClips.length > 0 && (
+                  <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
                     <button
-                      onClick={handleExportDatasetZip}
-                      className="bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs py-2 px-3.5 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+                      onClick={() => setDesignerMode("direct")}
+                      className={`text-xs font-semibold px-3 py-1.5 rounded transition-all cursor-pointer ${
+                        designerMode === "direct" ? "bg-indigo-600 text-white shadow" : "text-slate-400 hover:text-slate-200"
+                      }`}
                     >
-                      <Download className="h-3.5 w-3.5" /> Quick Zip Export
+                      <Sliders className="h-3.5 w-3.5 inline mr-1" /> Direct Controls
                     </button>
+                    <button
+                      onClick={() => setDesignerMode("ai")}
+                      className={`text-xs font-semibold px-3 py-1.5 rounded transition-all cursor-pointer ${
+                        designerMode === "ai" ? "bg-indigo-600 text-white shadow" : "text-slate-400 hover:text-slate-200"
+                      }`}
+                    >
+                      <Sparkles className="h-3.5 w-3.5 inline mr-1 text-amber-300" /> AI Persona Generator
+                    </button>
+                  </div>
+                </div>
+
+                {/* AI Persona Prompt Mode */}
+                {designerMode === "ai" && (
+                  <form onSubmit={handleAiDesignVoice} className="bg-slate-950/70 border border-slate-800 p-4 rounded-xl flex flex-col gap-3">
+                    <label className="text-xs font-bold text-indigo-300 uppercase tracking-wider font-mono">
+                      Describe the Voice Persona
+                    </label>
+                    <textarea
+                      value={aiDesignPrompt}
+                      onChange={(e) => setAiDesignPrompt(e.target.value)}
+                      placeholder="e.g. A fast-talking, cheeky Cockney street merchant who laughs frequently (<laugh>) and speaks with quick wit..."
+                      rows={3}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed placeholder-slate-600"
+                    />
+
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[11px] text-slate-400">Gemini 3.8 will extract accent, acoustic base voice, style guidance, and script prompts.</span>
+                      <button
+                        type="submit"
+                        disabled={isAiDesigning || !aiDesignPrompt.trim()}
+                        className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-bold py-2 px-4 rounded-lg flex items-center gap-1.5 cursor-pointer shrink-0"
+                      >
+                        {isAiDesigning ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                        Generate Persona
+                      </button>
+                    </div>
+
+                    {aiDesignError && (
+                      <div className="p-3 rounded-lg bg-rose-950/40 border border-rose-800/60 text-rose-200 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
+                          <span>{aiDesignError}</span>
+                        </div>
+                        <button
+                          type="submit"
+                          disabled={isAiDesigning}
+                          className="px-3 py-1 bg-rose-800 hover:bg-rose-700 text-white rounded text-[11px] font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shrink-0 self-end sm:self-auto"
+                        >
+                          <RefreshCw className="h-3 w-3" />
+                          Retry
+                        </button>
+                      </div>
+                    )}
+                  </form>
+                )}
+
+                {/* Direct Voice Parameter Settings */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 bg-slate-950/40 p-4 rounded-xl border border-slate-800">
+                  
+                  {/* Name */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-mono uppercase tracking-wider font-bold text-slate-300">Voice Profile Name</label>
+                    <input
+                      type="text"
+                      value={draftName}
+                      onChange={(e) => setDraftName(e.target.value)}
+                      placeholder="e.g. Cockney Streetwise Narrator"
+                      className="bg-slate-900 border border-slate-800 rounded px-3 py-2 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium"
+                    />
+                  </div>
+
+                  {/* Accent / Dialect */}
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-mono uppercase tracking-wider font-bold text-slate-300">
+                        Accent / Regional Dialect
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setIsCustomAccent(prev => !prev)}
+                        className="text-[11px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-semibold cursor-pointer"
+                      >
+                        {isCustomAccent ? "📋 Select from List" : "✏️ Type Custom"}
+                      </button>
+                    </div>
+
+                    {!isCustomAccent && ACCENT_PRESETS.includes(draftAccent) ? (
+                      <select
+                        value={draftAccent}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "__custom__") {
+                            setIsCustomAccent(true);
+                          } else {
+                            setDraftAccent(val);
+                          }
+                        }}
+                        className="w-full bg-slate-900 border border-slate-800 rounded px-3 py-2 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium cursor-pointer"
+                      >
+                        {ACCENT_PRESETS.map((acc) => (
+                          <option key={acc} value={acc}>{acc}</option>
+                        ))}
+                        <option value="__custom__">-- ✏️ Custom Dialect (Type Manually) --</option>
+                      </select>
+                    ) : (
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={draftAccent}
+                          onChange={(e) => setDraftAccent(e.target.value)}
+                          placeholder="e.g. Scottish Highlands, South African, Welsh, Geordie"
+                          autoFocus
+                          className="w-full bg-slate-900 border border-indigo-500/50 rounded px-3 py-2 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium placeholder-slate-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsCustomAccent(false);
+                            if (!ACCENT_PRESETS.includes(draftAccent)) {
+                              setDraftAccent(ACCENT_PRESETS[0]);
+                            }
+                          }}
+                          className="px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 shrink-0 cursor-pointer"
+                          title="Back to dropdown list"
+                        >
+                          List
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Quick Popular Accent Chips */}
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                      <span className="text-[10px] text-slate-500 font-mono">Popular:</span>
+                      {[
+                        { label: "Cockney", full: "British (Cockney London)" },
+                        { label: "British RP", full: "British (Received Pronunciation)" },
+                        { label: "Scottish", full: "Scottish (Highlands)" },
+                        { label: "Irish", full: "Irish (Dublin)" },
+                        { label: "Australian", full: "Australian (Broad Outback)" },
+                        { label: "Southern US", full: "American (Southern Drawl)" },
+                      ].map(pill => (
+                        <button
+                          key={pill.label}
+                          type="button"
+                          onClick={() => {
+                            setDraftAccent(pill.full);
+                            setIsCustomAccent(false);
+                          }}
+                          className={`text-[10px] px-2 py-0.5 rounded-full border transition-all cursor-pointer font-medium ${
+                            draftAccent === pill.full
+                              ? "bg-indigo-600/30 border-indigo-400 text-indigo-300"
+                              : "bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-400"
+                          }`}
+                        >
+                          {pill.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Base Prebuilt Voice Resonance Selection */}
+                  <div className="flex flex-col gap-1.5 md:col-span-2">
+                    <label className="text-xs font-mono uppercase tracking-wider font-bold text-slate-300 flex items-center justify-between">
+                      <span>Base Physical Resonance (All 6 Gemini 3.8 Voices)</span>
+                      <span className="text-[11px] text-indigo-400 font-normal">Active: <strong>{draftBaseVoice}</strong></span>
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+                      {ROSTER_VOICES.map((v) => (
+                        <button
+                          key={v.id}
+                          type="button"
+                          onClick={() => setDraftBaseVoice(v.id)}
+                          className={`p-2 rounded-lg border text-left flex flex-col transition-all cursor-pointer ${
+                            draftBaseVoice === v.id
+                              ? "bg-indigo-600/30 border-indigo-400 ring-1 ring-indigo-400"
+                              : "bg-slate-900 border-slate-800 hover:border-slate-700"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <span className="font-bold text-xs text-white">{v.id}</span>
+                            <span className="text-[9px] text-slate-400">{v.gender[0]}</span>
+                          </div>
+                          <span className="text-[10px] text-slate-400 truncate mt-0.5">{v.tone}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Style Guidance (Direct speechMetadata.style - NO prompt wrapping) */}
+                  <div className="flex flex-col gap-1.5 md:col-span-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-mono uppercase tracking-wider font-bold text-slate-300">
+                        Acting &amp; Style Guidance (Sent directly to speechMetadata.style)
+                      </label>
+                      <span className="text-[10px] text-emerald-400 font-mono">100% Clean Performance</span>
+                    </div>
+                    <textarea
+                      value={draftStyleGuidance}
+                      onChange={(e) => setDraftStyleGuidance(e.target.value)}
+                      rows={2}
+                      placeholder="e.g. Speak with an authentic Cockney accent, lively street merchant rhythm, warm and expressive."
+                      className="bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 leading-normal"
+                    />
+                    <span className="text-[10px] text-slate-400">
+                      Gemini 3.8 Flash TTS naturally executes authentic accents, emotional cadence, and throat texture when instructed directly.
+                    </span>
+                  </div>
+
+                  {/* Pace Slider & Pitch */}
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex justify-between items-center text-xs font-mono">
+                      <label className="uppercase tracking-wider font-bold text-slate-300">Speaking Pace / Rate</label>
+                      <span className="text-indigo-400 font-bold">{draftSpeed.toFixed(2)}x (Native)</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.75"
+                      max="1.50"
+                      step="0.05"
+                      value={draftSpeed}
+                      onChange={(e) => setDraftSpeed(parseFloat(e.target.value))}
+                      className="w-full accent-indigo-500 cursor-pointer h-1.5 bg-slate-900 rounded-lg appearance-none mt-2"
+                    />
+                    <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                      <span>0.75x</span>
+                      <span className="text-slate-300 font-bold">1.00x (Standard)</span>
+                      <span>1.50x</span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-mono uppercase tracking-wider font-bold text-slate-300">Vocal Pitch</label>
+                    <select
+                      value={draftPitch}
+                      onChange={(e) => setDraftPitch(e.target.value)}
+                      className="bg-slate-900 border border-slate-800 rounded px-3 py-2 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium"
+                    >
+                      <option value="Low">Low (Deep)</option>
+                      <option value="Medium-Low">Medium-Low</option>
+                      <option value="Medium">Medium (Balanced)</option>
+                      <option value="Medium-High">Medium-High</option>
+                      <option value="High">High (Bright)</option>
+                    </select>
+                  </div>
+
+                </div>
+
+                {/* LIVE ACOUSTIC PREVIEW CARD */}
+                <div className="bg-indigo-950/20 border border-indigo-500/25 p-5 rounded-xl flex flex-col gap-4 shadow-xl">
+                  <div className="flex items-center justify-between border-b border-indigo-500/20 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <Volume2 className="h-5 w-5 text-indigo-400 animate-pulse" />
+                      <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-indigo-300">
+                        Live Acoustic Preview (Gemini 3.8 Flash TTS)
+                      </h3>
+                    </div>
+                    <span className="text-[10px] font-mono bg-indigo-500/10 text-indigo-300 px-2 py-0.5 rounded border border-indigo-500/20">
+                      24kHz RIFF WAV
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <div className="flex justify-between items-center text-xs">
+                      <label className="text-slate-300 font-medium">Test Script Sentence</label>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] text-slate-400">Quick Insert Bursts:</span>
+                        {VOCAL_BURSTS.slice(0, 4).map(b => (
+                          <button
+                            key={b.tag}
+                            type="button"
+                            onClick={() => handleInsertTag(b.tag, setPreviewText)}
+                            className="text-[10px] font-mono bg-slate-900 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 px-1.5 py-0.5 rounded cursor-pointer transition-colors"
+                            title={b.desc}
+                          >
+                            {b.tag}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <textarea
+                      value={previewText}
+                      onChange={(e) => setPreviewText(e.target.value)}
+                      rows={2}
+                      className="bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 leading-normal"
+                    />
+                  </div>
+
+                  {/* Preview Trigger and Wave Visualizer */}
+                  <div className="flex flex-col sm:flex-row items-center gap-4">
+                    <button
+                      type="button"
+                      onClick={handleGeneratePreview}
+                      disabled={isPreviewGenerating || !previewText.trim()}
+                      className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-xs py-2.5 px-5 rounded-lg flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-indigo-600/20"
+                    >
+                      {isPreviewGenerating ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 animate-spin" /> Synthesizing WAV...
+                        </>
+                      ) : (
+                        <>
+                          <Volume2 className="h-4 w-4" /> Synthesize Live Preview
+                        </>
+                      )}
+                    </button>
+
+                    {previewAudioBase64 && (
+                      <div className="flex-1 w-full flex items-center gap-3 bg-slate-950/80 px-4 py-2 rounded-lg border border-slate-800">
+                        <button
+                          type="button"
+                          onClick={handleTogglePlayPreview}
+                          className="p-2 rounded-full bg-indigo-600 text-white hover:bg-indigo-500 transition-colors cursor-pointer"
+                        >
+                          {isPlayingPreview ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-current ml-0.5" />}
+                        </button>
+                        <div className="flex-1 flex items-end gap-1 h-8">
+                          {renderWaveBars(previewAudioBase64, isPlayingPreview, previewProgress)}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {previewError && (
+                    <div className="p-2.5 rounded bg-rose-950/30 border border-rose-900/50 text-rose-300 text-xs flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
+                      <span>{previewError}</span>
+                    </div>
                   )}
                 </div>
 
-                {activeModelClips.length === 0 ? (
-                  <div className="flex-1 flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-slate-800 rounded-lg bg-slate-950/20 px-6">
-                    <FileAudio className="h-12 w-12 text-slate-700 mb-3" />
-                    <h4 className="text-sm font-semibold text-slate-300">No Audio Clips Synthesized Yet</h4>
-                    <p className="text-xs text-slate-500 max-w-sm mt-1 mb-4 leading-relaxed">
-                      Select or type training script scripts in the **Clip Studio** tab and click **Synthesize &amp; Save** to build your LoRA training library.
-                    </p>
+                {/* Training Scripts Editor for LoRA fine-tuning */}
+                <div className="bg-slate-950/40 border border-slate-800 p-4 rounded-xl flex flex-col gap-3">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                      <BookOpen className="h-4 w-4 text-indigo-400" /> Phonetic Training Scripts ({draftPrompts.length})
+                    </h3>
                     <button
-                      onClick={() => setActiveTab("studio")}
-                      className="bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-500/30 text-xs font-semibold py-2 px-4 rounded-lg transition-colors cursor-pointer"
+                      type="button"
+                      onClick={handleGenerateCustomPrompts}
+                      disabled={isGeneratingPrompts}
+                      className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
                     >
-                      Go to Clip Studio
+                      {isGeneratingPrompts ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                      Generate More Scripts
                     </button>
                   </div>
-                ) : (
-                  <div className="flex flex-col gap-3 max-h-[460px] overflow-y-auto pr-1">
-                    {activeModelClips.map((clip) => {
-                      const isPlaying = playingClipId === clip.id;
-                      const fingerprintedWave = generateWaveform(clip.audioBase64);
-                      
-                      return (
-                        <div 
-                          key={clip.id}
-                          className={`p-4 rounded-lg border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-950/40 hover:bg-slate-950/70 border-slate-800/80`}
-                        >
-                          {/* SCRIPT TEXT & SPECS */}
-                          <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-                            <p className="text-sm text-slate-200 font-medium leading-relaxed italic">"{clip.text}"</p>
-                            
-                            <div className="flex flex-wrap items-center gap-3 text-[10px] text-slate-400 font-mono">
-                              <span className="flex items-center gap-1">
-                                <Volume2 className="h-3 w-3 text-slate-500" /> Pitch: {clip.pitch}
-                              </span>
-                              <span>•</span>
-                              <span>Speed: {clip.speed.toFixed(2)}x</span>
-                              {clip.emotion && (
-                                <>
-                                  <span>•</span>
-                                  <span className="text-indigo-400 font-semibold">{clip.emotion}</span>
-                                </>
-                              )}
-                              <span>•</span>
-                              <span className="text-slate-500">{clip.duration.toFixed(1)}s</span>
-                              {clip.voiceSeed && (
-                                <>
-                                  <span>•</span>
-                                  <span className="text-emerald-400 font-semibold tracking-wider">Seed: {clip.voiceSeed}</span>
-                                </>
-                              )}
-                            </div>
-                          </div>
 
-                          {/* INTERACTIVE WAVE PLAYER */}
-                          <div className="flex items-center gap-4 bg-slate-900/60 py-2.5 px-4 rounded-lg border border-slate-800 self-stretch md:self-auto md:min-w-[280px]">
-                            {/* PLAY BUTTON */}
-                            <button
-                              onClick={() => handleTogglePlay(clip)}
-                              className={`p-2.5 rounded-full flex items-center justify-center transition-all cursor-pointer ${
-                                isPlaying 
-                                  ? "bg-amber-500 text-slate-950" 
-                                  : "bg-indigo-600 hover:bg-indigo-500 text-white"
-                              }`}
-                            >
-                              {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-current ml-0.5" />}
-                            </button>
-
-                            {/* WAVEFORM */}
-                            <div className="flex-1 flex items-end gap-0.5 h-8 min-w-[120px]">
-                              {fingerprintedWave.map((amp, idx) => {
-                                const barProgress = (idx / fingerprintedWave.length) * 100;
-                                const isPassed = isPlaying && playbackProgress >= barProgress;
-                                return (
-                                  <div
-                                    key={idx}
-                                    className={`flex-1 rounded-full transition-all duration-150 ${
-                                      isPassed 
-                                        ? "bg-indigo-400" 
-                                        : isPlaying 
-                                          ? "bg-slate-700" 
-                                          : "bg-slate-800"
-                                    }`}
-                                    style={{ 
-                                      height: `${amp * 100}%`,
-                                      transform: isPlaying && isPassed ? "scaleY(1.15)" : "scaleY(1)"
-                                    }}
-                                  />
-                                );
-                              })}
-                            </div>
-                          </div>
-
-                          {/* ACTION BUTTONS */}
-                          <div className="flex items-center justify-end gap-2.5 border-t border-slate-800/40 md:border-t-0 pt-3 md:pt-0">
-                            <button
-                              onClick={() => handleDownloadSingleWav(clip)}
-                              className="text-xs flex items-center gap-1.5 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 px-3 py-1.5 rounded-lg border border-indigo-500/20 transition-all cursor-pointer"
-                              title="Download WAV File"
-                            >
-                              <Download className="h-3.5 w-3.5" /> WAV
-                            </button>
-                            
-                            <button
-                              onClick={() => handleDeleteClip(clip.id)}
-                              className="p-2 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
-                              title="Delete Clip"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-
+                  <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-1">
+                    {draftPrompts.map((p, idx) => (
+                      <div key={p.id || idx} className="p-2.5 bg-slate-900/90 rounded border border-slate-800 flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
+                          <span className="font-bold text-slate-300">Script #{idx + 1}</span>
+                          <span className="text-indigo-400 font-semibold">{p.emotion}</span>
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-              </div>
-            )}
-
-            {/* TAB: VOICE DESIGNER STUDIO */}
-            {activeTab === "designer" && (
-              <div className="flex flex-col gap-6 max-w-2xl mx-auto w-full flex-1 justify-center py-4">
-                
-                <div className="text-center flex flex-col items-center gap-2">
-                  <div className="p-3 bg-amber-500/10 text-amber-400 rounded-full border border-amber-500/20 mb-1">
-                    <Sparkles className="h-8 w-8 animate-pulse" />
-                  </div>
-                  <h3 className="text-xl font-bold text-white font-display">
-                    {apiProvider === "openrouter" ? "OpenRouter Voice Designer" : "Gemini Voice Designer"}
-                  </h3>
-                  <p className="text-xs text-slate-400 max-w-md">
-                    Input a description of a voice or character. {apiProvider === "openrouter" ? `OpenRouter (using ${openRouterModel || "selected model"})` : "Gemini"} will custom build a structured vocal profile, recommend configurations, and design a set of 12 distinct phonetically diverse script prompts.
-                  </p>
-                </div>
-
-                <form onSubmit={handleDesignVoice} className="bg-slate-950/40 border border-slate-800 p-5 rounded-xl flex flex-col gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-slate-300">Acoustic / Character Description</label>
-                    <textarea
-                      value={designPrompt}
-                      onChange={(e) => setDesignPrompt(e.target.value)}
-                      placeholder="e.g., A grizzled 55-year-old space pilot with a raspy voice, Scottish accent, speaking in slow weary pacing..."
-                      rows={4}
-                      className="bg-slate-900 border border-slate-800 rounded-lg p-3 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed placeholder-slate-600"
-                    />
+                        <input
+                          type="text"
+                          value={p.text}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setDraftPrompts(prev => prev.map((item, i) => i === idx ? { ...item, text: val } : item));
+                          }}
+                          className="bg-slate-950 border border-slate-800 rounded px-2.5 py-1 text-xs text-slate-200"
+                        />
+                      </div>
+                    ))}
                   </div>
 
                   <button
-                    type="submit"
-                    disabled={isDesigning || !designPrompt.trim()}
-                    className={`w-full font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer ${
-                      isDesigning 
-                        ? "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700" 
-                        : !designPrompt.trim()
-                          ? "bg-slate-800/40 text-slate-600 border border-slate-800/80 cursor-not-allowed"
-                          : "bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white shadow-indigo-600/10"
-                    }`}
+                    type="button"
+                    onClick={() => {
+                      setDraftPrompts(prev => [
+                        ...prev,
+                        { id: `tp_${Date.now()}`, text: "Add your custom training script line here...", emotion: "Neutral", focus: "Phonetic practice" }
+                      ]);
+                    }}
+                    className="self-start text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer pt-1"
                   >
-                    {isDesigning ? (
-                      <>
-                        <div className="h-4 w-4 border-2 border-slate-500 border-t-white rounded-full animate-spin" />
-                        Analyzing and Drafting Voice Model Profile...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="h-4 w-4" /> Design Voice Profile
-                      </>
-                    )}
+                    + Add Training Line
                   </button>
+                </div>
 
-                  {designError && (
-                    <div className="bg-rose-950/20 text-rose-300 border border-rose-900/40 p-3 rounded-lg text-xs flex items-start gap-2.5">
-                      <AlertCircle className="h-4 w-4 shrink-0 text-rose-400 mt-0.5" />
-                      <span className="leading-normal">{designError}</span>
-                    </div>
-                  )}
-                </form>
-
-                {/* HELP BOX */}
-                <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-xl flex items-start gap-3">
-                  <HelpCircle className="h-5 w-5 text-indigo-400 shrink-0 mt-0.5" />
-                  <div className="flex flex-col gap-1 text-xs">
-                    <span className="font-semibold text-slate-200">How to write good prompts</span>
-                    <p className="text-slate-400 leading-relaxed">
-                      Describe age (e.g., 20-year-old), vocal texture (e.g., gravelly, smooth, breathy), tone (e.g., hyperactive, lethargic), gender identity, regional accent, and intended use-case (e.g., audiobooks, commercial promos).
-                    </p>
-                  </div>
+                {/* Commit to Studio Library */}
+                <div className="flex justify-end gap-3 pt-2 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={handleSaveDraftVoiceModel}
+                    className="bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold text-xs py-3 px-6 rounded-lg shadow-lg shadow-emerald-600/20 flex items-center gap-2 cursor-pointer transition-all"
+                  >
+                    <CheckCircle2 className="h-4 w-4" /> Save Voice Model to Studio Library
+                  </button>
                 </div>
 
               </div>
+            )}
+
+            {/* TAB 2: CLIP STUDIO SYNTHESIZER */}
+            {activeTab === "studio" && (
+              <div className="flex flex-col gap-6 flex-1">
+                {activeModel ? (
+                  <>
+                    {/* Active Voice Summary Card */}
+                    <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-white">{activeModel.name}</span>
+                          <span className="text-xs font-mono px-2 py-0.5 bg-indigo-500/10 text-indigo-400 rounded border border-indigo-500/20">
+                            {activeModel.baseVoice}
+                          </span>
+                        </div>
+                        <span className="text-xs text-slate-400 mt-0.5">{activeModel.accent} • {activeModel.narrationStyle}</span>
+                      </div>
+                      <button
+                        onClick={() => handleEditModelInDesigner(activeModel)}
+                        className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer self-start sm:self-auto"
+                      >
+                        <Settings2 className="h-3.5 w-3.5" /> Edit Profile in Designer
+                      </button>
+                    </div>
+
+                    {/* Script Synthesis Box */}
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-mono uppercase tracking-wider font-bold text-slate-300">
+                          Synthesis Script
+                        </label>
+                        <span className="text-[11px] text-slate-500 font-mono">{studioText.length} chars</span>
+                      </div>
+
+                      <textarea
+                        value={studioText}
+                        onChange={(e) => setStudioText(e.target.value)}
+                        placeholder="Type script sentence or select a recommended prompt below..."
+                        rows={4}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed placeholder-slate-600"
+                      />
+
+                      {/* Expressive Burst & Backchannel Toolbar */}
+                      <div className="flex flex-wrap items-center gap-1.5 p-2 bg-slate-950/80 border border-slate-800/80 rounded-lg">
+                        <span className="text-[10px] font-mono text-slate-400 pr-1">Insert Gemini 3.8 Bursts:</span>
+                        {VOCAL_BURSTS.map((burst) => (
+                          <button
+                            key={burst.tag}
+                            type="button"
+                            onClick={() => handleInsertTag(burst.tag, setStudioText)}
+                            className="text-[11px] font-mono bg-slate-900 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 px-2 py-1 rounded cursor-pointer transition-colors"
+                            title={burst.desc}
+                          >
+                            {burst.tag}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Active Style Guidance Display */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-mono uppercase tracking-wider font-bold text-slate-400">
+                        Performance Direction (speechMetadata.style)
+                      </label>
+                      <input
+                        type="text"
+                        value={studioStyleOverride}
+                        onChange={(e) => setStudioStyleOverride(e.target.value)}
+                        placeholder="Style cues passed to Gemini 3.8 Flash TTS..."
+                        className="bg-slate-950 border border-slate-800 rounded px-3 py-2 text-xs text-slate-200"
+                      />
+                    </div>
+
+                    {/* Synthesize Action */}
+                    <button
+                      type="button"
+                      onClick={handleGenerateStudioClip}
+                      disabled={isGeneratingClip || !studioText.trim()}
+                      className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-sm py-3 px-6 rounded-lg flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 cursor-pointer transition-all"
+                    >
+                      {isGeneratingClip ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 animate-spin" /> Synthesizing High-Fidelity Audio...
+                        </>
+                      ) : (
+                        <>
+                          <Volume2 className="h-4 w-4" /> Synthesize &amp; Save Clip (WAV)
+                        </>
+                      )}
+                    </button>
+
+                    {generationError && (
+                      <div className="p-3 rounded-lg bg-rose-950/30 border border-rose-900/50 text-rose-300 text-xs flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
+                        <span>{generationError}</span>
+                      </div>
+                    )}
+
+                    {/* Recommended Scripts Selector */}
+                    {activeModel.trainingPrompts && activeModel.trainingPrompts.length > 0 && (
+                      <div className="flex flex-col gap-2 pt-2 border-t border-slate-800">
+                        <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-400">
+                          Recommended Persona Training Scripts:
+                        </span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {activeModel.trainingPrompts.map((p) => (
+                            <div
+                              key={p.id}
+                              onClick={() => {
+                                setStudioText(p.text);
+                                setActivePromptId(p.id);
+                              }}
+                              className={`p-2.5 rounded-lg border text-left cursor-pointer transition-all ${
+                                studioText === p.text
+                                  ? "bg-indigo-950/40 border-indigo-500/70"
+                                  : "bg-slate-950/40 border-slate-800 hover:bg-slate-900"
+                              }`}
+                            >
+                              <div className="flex justify-between items-center text-[10px] font-mono text-slate-500 mb-1">
+                                <span className="font-semibold text-indigo-400">{p.emotion}</span>
+                                <span className="truncate">{p.focus}</span>
+                              </div>
+                              <p className="text-xs text-slate-200 line-clamp-2 italic">"{p.text}"</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="p-8 text-center text-slate-400">
+                    No voice model selected. Click "New Voice from Scratch" to begin.
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB: LORA TRAINING & DATASET STUDIO */}
+            {(activeTab === "lora" || activeTab === "library") && (
+              <LoRADatasetStudio
+                activeModel={activeModel}
+                voiceModels={voiceModels}
+                onSelectModel={setSelectedModelId}
+                audioClips={audioClips}
+                setAudioClips={setAudioClips}
+                googleApiKey={googleApiKey}
+                onNavigateToDesigner={() => setActiveTab("designer")}
+                onNavigateToClipStudio={() => setActiveTab("studio")}
+              />
             )}
 
           </div>
 
         </section>
 
+        {/* SLIDE-OVER DRAWER: VOICE MODELS & ACOUSTIC ROSTER */}
+        {showVoiceSidebar && (
+          <div className="fixed inset-0 z-50 flex justify-end animate-in fade-in duration-200">
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 bg-black/70 backdrop-blur-sm"
+              onClick={() => setShowVoiceSidebar(false)}
+            />
+
+            {/* Slide Sheet */}
+            <aside className="relative w-full max-w-md bg-slate-900 border-l border-slate-800 p-6 flex flex-col gap-5 shadow-2xl z-10 overflow-y-auto">
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <Layers className="h-5 w-5 text-indigo-400" />
+                  <h2 className="text-sm font-bold text-white uppercase tracking-wider font-mono">
+                    Voice Models &amp; Roster
+                  </h2>
+                </div>
+                <button
+                  onClick={() => setShowVoiceSidebar(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                  title="Close panel"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Action: Create New Voice */}
+              <button
+                onClick={() => {
+                  handleCreateBlankVoice();
+                  setShowVoiceSidebar(false);
+                  setActiveTab("designer");
+                }}
+                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 shadow-md shadow-indigo-600/20 cursor-pointer transition-all"
+              >
+                <Plus className="h-4 w-4" /> Create New Voice from Scratch
+              </button>
+
+              {/* My Voice Profiles */}
+              <div className="flex flex-col gap-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono font-bold uppercase text-slate-300">
+                    My Voice Profiles ({voiceModels.length})
+                  </span>
+                </div>
+
+                <div className="flex flex-col gap-2 max-h-[260px] overflow-y-auto pr-1">
+                  {voiceModels.length === 0 ? (
+                    <div className="p-4 text-center text-xs text-slate-500 border border-dashed border-slate-800 rounded-lg">
+                      No custom voice models created yet.
+                    </div>
+                  ) : (
+                    voiceModels.map((model) => {
+                      const isSelected = model.id === selectedModelId;
+                      const clipCount = audioClips.filter((c) => c.modelId === model.id).length;
+
+                      return (
+                        <div
+                          key={model.id}
+                          onClick={() => {
+                            setSelectedModelId(model.id);
+                          }}
+                          className={`p-3 rounded-lg border text-left cursor-pointer transition-all flex flex-col gap-2 ${
+                            isSelected
+                              ? "bg-slate-800/90 border-indigo-500 shadow-md ring-1 ring-indigo-500/40"
+                              : "bg-slate-950/60 border-slate-800 hover:bg-slate-950 hover:border-slate-700"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex flex-col min-w-0">
+                              <span className="text-xs font-bold text-slate-100 truncate">{model.name}</span>
+                              <span className="text-[11px] text-indigo-400 font-medium truncate">{model.accent}</span>
+                            </div>
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-400 shrink-0">
+                              {model.baseVoice}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-800/50">
+                            <span className="font-mono">{clipCount} clips</span>
+                            <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                onClick={() => {
+                                  handleEditModelInDesigner(model);
+                                  setShowVoiceSidebar(false);
+                                  setActiveTab("designer");
+                                }}
+                                className="text-slate-400 hover:text-indigo-300 p-1 rounded hover:bg-slate-800 transition-colors"
+                                title="Edit in Voice Designer"
+                              >
+                                <Settings2 className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDuplicateModel(model)}
+                                className="text-slate-400 hover:text-slate-200 p-1 rounded hover:bg-slate-800 transition-colors"
+                                title="Duplicate Model"
+                              >
+                                <Copy className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteModel(model.id)}
+                                className="text-slate-500 hover:text-rose-400 p-1 rounded hover:bg-rose-500/10 transition-colors"
+                                title="Delete Voice Model"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* Gemini 3.8 Voice Roster */}
+              <div className="flex flex-col gap-2.5 pt-3 border-t border-slate-800">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono font-bold uppercase text-slate-300">
+                    6 Acoustic Engines (Gemini 3.8)
+                  </span>
+                  <span className="text-[10px] font-mono text-emerald-400 font-semibold">Active</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {ROSTER_VOICES.map((v) => (
+                    <div
+                      key={v.id}
+                      onClick={() => {
+                        setDraftBaseVoice(v.id);
+                        setShowVoiceSidebar(false);
+                        setActiveTab("designer");
+                      }}
+                      className={`p-2.5 rounded-lg border bg-gradient-to-br cursor-pointer transition-all hover:scale-[1.02] flex flex-col gap-1 ${v.color} ${
+                        draftBaseVoice === v.id ? "ring-2 ring-indigo-400" : ""
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs text-white">{v.id}</span>
+                        <span className="text-[10px] font-mono opacity-80">{v.gender}</span>
+                      </div>
+                      <span className="text-[10px] font-medium opacity-90 truncate">{v.tone}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* API Key Settings */}
+              <div className="flex flex-col gap-2 pt-3 border-t border-slate-800 mt-auto">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono uppercase tracking-wider font-bold text-slate-300 flex items-center gap-1.5">
+                    <Key className="h-3.5 w-3.5 text-indigo-400" /> API Settings
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowApiKey(!showApiKey)}
+                    className="text-[11px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
+                  >
+                    {showApiKey ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                    {showApiKey ? "Hide" : "Show"}
+                  </button>
+                </div>
+                <input
+                  type={showApiKey ? "text" : "password"}
+                  value={googleApiKey}
+                  onChange={(e) => handleApiKeyChange(e.target.value)}
+                  placeholder="Server key active (optional custom key)"
+                  className="bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
+                />
+              </div>
+
+            </aside>
+          </div>
+        )}
+
       </main>
 
-      {/* FOOTER METRICS SUMMARY */}
-      <footer id="app-footer" className="mt-auto border-t border-slate-800 bg-slate-950 p-4 text-center text-xs text-slate-500">
+      {/* FOOTER */}
+      <footer className="mt-auto border-t border-slate-800/80 bg-slate-950 p-4 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 px-4">
-          <p>AI Voice Model &amp; LoRA Dataset Studio © 2026. Designed for offline/local LoRA dataset pre-training preparation.</p>
+          <p>Powered natively by Google Gemini 3.8 Flash TTS. RIFF WAV 24,000Hz Output.</p>
           <div className="flex items-center justify-center gap-3 font-mono text-[10px]">
-            <span className="text-emerald-500 flex items-center gap-1 font-medium">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" />
-              Gemini Server Connected
+            <span className="text-emerald-400 flex items-center gap-1 font-medium">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
+              gemini-3.8-flash-tts
             </span>
             <span>•</span>
-            <span>Sample Rate: 24,000Hz WAV</span>
+            <span>gemini-3.8-flash</span>
           </div>
         </div>
       </footer>

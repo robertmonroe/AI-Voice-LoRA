@@ -1,0 +1,92 @@
+{
+  "voiceModels": [
+    {
+      "id": "model_fenrir_authoritative",
+      "name": "Fenrir - Cinematic British RP",
+      "description": "Deep, authoritative British baritone with rich resonance and dramatic pacing.",
+      "gender": "Male",
+      "accent": "British (Received Pronunciation)",
+      "baseVoice": "Fenrir",
+      "pitch": "Low",
+      "speed": 1.0,
+      "styleGuidance": "Speak in an authentic, deep British RP accent with dramatic weight, clear articulation, and measured gravitas.",
+      "narrationStyle": "Audiobook & Cinematic Narration",
+      "trainingPrompts": [
+        {
+          "id": "fp_1",
+          "text": "Before the first kingdoms were carved into stone, the oceans were silent and the stars burnt cold.",
+          "emotion": "Dramatic",
+          "focus": "Low-register resonance and plosives"
+        },
+        {
+          "id": "fp_2",
+          "text": "Listen carefully: <breath> when the dawn bell rings, forty legions will stand upon the ridge.",
+          "emotion": "Serious",
+          "focus": "Breath control, numbers, and command"
+        },
+        {
+          "id": "fp_3",
+          "text": "Did you truly believe that iron gates could keep the mountain wind from finding you?",
+          "emotion": "Authoritative",
+          "focus": "Question intonation and dental stops"
+        }
+      ],
+      "createdAt": "2026-10-01T12:00:00.000Z"
+    },
+    {
+      "id": "model_kore_soothing",
+      "name": "Kore - Warm & Natural Storyteller",
+      "description": "Clear, balanced, melodic female voice suitable for audiobooks, essays, and conversational narration.",
+      "gender": "Female",
+      "accent": "American (Pacific Northwest)",
+      "baseVoice": "Kore",
+      "pitch": "Medium",
+      "speed": 1.0,
+      "styleGuidance": "Warm, engaging, and articulate delivery with natural rhythm and expressive inflection.",
+      "narrationStyle": "Audiobook & Documentary",
+      "trainingPrompts": [
+        {
+          "id": "kp_1",
+          "text": "The quiet sunlight drifted through the library windows, illuminating centuries of forgotten manuscripts.",
+          "emotion": "Warm",
+          "focus": "Vowel glide and sibilant balance"
+        },
+        {
+          "id": "kp_2",
+          "text": "Every morning brought a new rhythm to the coastal town, from the gulls to the ringing harbor buoys.",
+          "emotion": "Conversational",
+          "focus": "Cadence and natural phrasing"
+        }
+      ],
+      "createdAt": "2026-10-01T12:00:00.000Z"
+    },
+    {
+      "id": "model_puck_cockney",
+      "name": "Puck - London Cockney Streetwise",
+      "description": "Quick-witted, agile male voice with authentic Cockney dialect and lively energy.",
+      "gender": "Male",
+      "accent": "British (Cockney)",
+      "baseVoice": "Puck",
+      "pitch": "Medium-High",
+      "speed": 1.05,
+      "styleGuidance": "Authentic East London Cockney accent, punchy cadence, lively and slightly cheeky character delivery.",
+      "narrationStyle": "Character Dialogue & Audio Drama",
+      "trainingPrompts": [
+        {
+          "id": "pp_1",
+          "text": "Right, listen 'ere mate, <laugh> you can't just go strollin' into the market thinkin' nobody's watchin'!",
+          "emotion": "Lively",
+          "focus": "Glottal stops, diphthongs, and burst laughter"
+        },
+        {
+          "id": "pp_2",
+          "text": "Proper mystery, that is. Thirty-two crates vanish into thin air, and not a soul saw a thing!",
+          "emotion": "Surprised",
+          "focus": "Rapid articulation and question cadence"
+        }
+      ],
+      "createdAt": "2026-10-01T12:00:00.000Z"
+    }
+  ],
+  "audioClips": []
+}
